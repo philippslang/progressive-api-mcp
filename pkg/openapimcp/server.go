@@ -90,6 +90,7 @@ func (s *Server) Start(ctx context.Context) error {
 			port = 8080
 		}
 		addr := fmt.Sprintf("%s:%d", host, port)
+		fmt.Fprintf(os.Stderr, "[prograpimcp] MCP endpoint: http://%s/mcp\n", addr)
 		httpSrv := server.NewStreamableHTTPServer(s.mcpSrv)
 
 		// Start the server in a goroutine so we can watch ctx.
