@@ -1,0 +1,205 @@
+openapi: "3.1.0"
+info:
+  title: Petstore
+  version: "1.0.0"
+  description: A minimal but realistic Petstore API for testing.
+servers:
+  - url: http://localhost:8080
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+    post:
+      summary: Create a pet
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewPet"
+      responses:
+        "201":
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+  /pets/{id}:
+    get:
+      summary: Get a pet by ID
+      operationId: getPet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "404":
+          description: Pet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update a pet
+      operationId: updatePet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewPet"
+      responses:
+        "200":
+          description: Pet updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+    patch:
+      summary: Partially update a pet
+      operationId: patchPet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetPatch"
+      responses:
+        "200":
+          description: Pet patched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+    delete:
+      summary: Delete a pet
+      operationId: deletePet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Pet deleted
+  /owners:
+    get:
+      summary: List all owners
+      operationId: listOwners
+      responses:
+        "200":
+          description: A list of owners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Owner"
+  /owners/{id}:
+    get:
+      summary: Get an owner by ID
+      operationId: getOwner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: An owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Owner"
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - species
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        species:
+          type: string
+        age:
+          type: integer
+    NewPet:
+      type: object
+      required:
+        - name
+        - species
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        age:
+          type: integer
+    PetPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    Owner:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string

@@ -9,18 +9,18 @@ Auto-generated from all feature plans. Last updated: 2026-03-28
 ## Project Structure
 
 ```text
-cmd/prograpimcp/main.go       # Binary entry point
-internal/config/              # Config struct, YAML loading, viper/cobra binding
-internal/loader/              # OpenAPI file parsing and structure validation
-internal/registry/            # In-memory API registry
-internal/validator/           # Request validation wrapper (libopenapi-validator)
-internal/tools/               # MCP tool handlers (http, explore, schema)
-internal/httpclient/          # Outbound HTTP call executor
-internal/server/              # MCP server init and transport selection
-tests/integration/            # End-to-end tests using httptest.NewServer
-tests/unit/                   # Per-package unit tests
-tests/contract/               # MCP tool contract shape tests
-tests/testdata/               # OpenAPI fixture files (petstore.yaml, etc.)
+pkg/openapimcp/       # PRIMARY LIBRARY ENTRY POINT — New(), Start(), Stop()
+pkg/config/           # Config struct, LoadFile(); no cobra/viper dependency
+pkg/loader/           # OpenAPI file parsing and structure validation
+pkg/registry/         # In-memory API registry — exported, usable standalone
+pkg/validator/        # Request validation wrapper — exported, usable standalone
+pkg/tools/            # MCP tool handlers (http, explore, schema)
+pkg/httpclient/       # Outbound HTTP call executor
+cmd/prograpimcp/      # CLI binary — thin cobra+viper wrapper around pkg/openapimcp
+tests/integration/    # End-to-end tests (httptest.NewServer + library embedding test)
+tests/unit/           # Per-package unit tests
+tests/contract/       # MCP tool and library API contract shape tests
+tests/testdata/       # OpenAPI fixture files (petstore.yaml, bookstore.yaml)
 ```
 
 ## Commands
@@ -38,6 +38,8 @@ golangci-lint run                           # Lint
 - Table-driven tests (`[]struct{ name, input, want }`)
 - Errors wrapped with `fmt.Errorf("context: %w", err)`
 - No global state; dependencies passed via constructors
+- `pkg/` packages MUST NOT import `cobra` or `viper` — those belong in `cmd/` only
+- All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
 

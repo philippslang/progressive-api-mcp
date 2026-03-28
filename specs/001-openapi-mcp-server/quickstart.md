@@ -144,6 +144,55 @@ Add to `~/.config/claude/claude_desktop_config.json`:
 }
 ```
 
+## 9. Use as a Go Library
+
+Other Go programs can embed the MCP server without the CLI. Add the dependency:
+
+```bash
+go get github.com/your-org/prograpimcp
+```
+
+**Minimal embedding example**:
+
+```go
+import (
+    "context"
+    "github.com/your-org/prograpimcp/pkg/config"
+    "github.com/your-org/prograpimcp/pkg/openapimcp"
+)
+
+cfg := config.Config{
+    Server: config.ServerConfig{Host: "0.0.0.0", Port: 9090, Transport: "http"},
+    APIs: []config.APIConfig{
+        {Name: "myapi", Definition: "./myapi.yaml", Host: "https://api.example.com"},
+    },
+}
+srv, err := openapimcp.New(cfg)
+if err != nil { /* handle */ }
+if err := srv.Start(context.Background()); err != nil { /* handle */ }
+```
+
+**Use only the validator** (no MCP server):
+
+```go
+import (
+    "github.com/your-org/prograpimcp/pkg/registry"
+    "github.com/your-org/prograpimcp/pkg/validator"
+)
+
+reg := registry.New()
+reg.Load(config.APIConfig{Name: "myapi", Definition: "./myapi.yaml"})
+entry, _ := reg.Lookup("myapi")
+result := entry.Validator.Validate(myHttpRequest)
+if !result.Valid {
+    for _, e := range result.Errors {
+        fmt.Printf("[%s] %s: %s\n", e.Type, e.Field, e.Message)
+    }
+}
+```
+
+See [contracts/library-api.md](contracts/library-api.md) for the full stable API reference.
+
 ## Validation
 
 Run the full test suite to verify a working installation:

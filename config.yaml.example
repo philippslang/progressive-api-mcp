@@ -1,0 +1,17 @@
+# OpenAPI MCP Server configuration
+# Override precedence: CLI flags > environment variables > this file > defaults
+
+server:
+  host: "127.0.0.1"          # PROGRAPIMCP_SERVER_HOST / --host
+  port: 8080                  # PROGRAPIMCP_SERVER_PORT / --port
+  transport: "http"           # PROGRAPIMCP_SERVER_TRANSPORT / --transport
+                              # Options: "http" (Streamable HTTP) or "stdio"
+
+apis:
+  - name: petstore                           # Unique identifier used in tool calls
+    definition: "./petstore.yaml"            # Path to OpenAPI 3.x file (YAML or JSON)
+    host: "https://api.example.com"          # Optional: overrides servers[0].url host
+    base_path: "/v2"                         # Optional: overrides servers[0].url path
+
+  # - name: another-api
+  #   definition: "./another.yaml"
