@@ -32,10 +32,16 @@ func testdataPath(name string) string {
 // InProcessTransport, initializes a client, and returns the client.
 func makeTestClient(t *testing.T, reg *registry.Registry, httpClient *httpclient.Client) *client.Client {
 	t.Helper()
+	return makeTestClientWithPrefix(t, "", reg, httpClient)
+}
+
+// makeTestClientWithPrefix builds an MCPServer with the given registry and tool prefix.
+func makeTestClientWithPrefix(t *testing.T, prefix string, reg *registry.Registry, httpClient *httpclient.Client) *client.Client {
+	t.Helper()
 	srv := mcpserver.NewMCPServer("test", "1.0.0", mcpserver.WithToolCapabilities(true))
-	tools.RegisterHTTPTools(srv, reg, httpClient)
-	tools.RegisterExploreTools(srv, reg)
-	tools.RegisterSchemaTools(srv, reg)
+	tools.RegisterHTTPTools(srv, reg, httpClient, prefix)
+	tools.RegisterExploreTools(srv, reg, prefix)
+	tools.RegisterSchemaTools(srv, reg, prefix)
 
 	tr := transport.NewInProcessTransport(srv)
 	c := client.NewClient(tr)
@@ -45,6 +51,15 @@ func makeTestClient(t *testing.T, reg *registry.Registry, httpClient *httpclient
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = c.Close() })
 	return c
+}
+
+// callToolRaw invokes a named tool and returns the raw result and error.
+func callToolRaw(t *testing.T, c *client.Client, toolName string, args map[string]any) (*mcp.CallToolResult, error) {
+	t.Helper()
+	req := mcp.CallToolRequest{}
+	req.Params.Name = toolName
+	req.Params.Arguments = args
+	return c.CallTool(context.Background(), req)
 }
 
 // callTool is a helper to invoke a named tool and return the result text.
@@ -325,6 +340,77 @@ func TestMultiAPIAmbiguity(t *testing.T) {
 			assert.True(t, len(path) >= 6 && path[:6] == "/books",
 				"expected bookstore paths, got %s", path)
 		}
+	})
+}
+
+// TestToolPrefix verifies that tools are registered with a prefix when ToolPrefix is set.
+func TestToolPrefix(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClientWithPrefix(t, "test", reg, httpClient)
+
+	t.Run("test_explore_api returns path list", func(t *testing.T) {
+		text := callTool(t, c, "test_explore_api", map[string]any{})
+		var paths []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &paths))
+		assert.Greater(t, len(paths), 0)
+	})
+
+	t.Run("unprefixed explore_api returns tool-not-found error", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "explore_api", map[string]any{})
+		assert.Error(t, err)
+	})
+}
+
+// TestNoPrefixDefaultBehavior verifies that empty ToolPrefix leaves original tool names intact.
+func TestNoPrefixDefaultBehavior(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClientWithPrefix(t, "", reg, httpClient)
+
+	t.Run("explore_api works with empty prefix", func(t *testing.T) {
+		text := callTool(t, c, "explore_api", map[string]any{})
+		var paths []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &paths))
+		assert.Greater(t, len(paths), 0)
+	})
+
+	t.Run("http_get works with empty prefix", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/pets"})
+		assert.NotEmpty(t, text)
+	})
+}
+
+// TestTrailingUnderscoreStripped verifies that a trailing underscore in ToolPrefix is stripped,
+// so tools are registered as "myapi_http_get" not "myapi__http_get".
+func TestTrailingUnderscoreStripped(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClientWithPrefix(t, "myapi_", reg, httpClient)
+
+	t.Run("myapi_http_get works (single underscore)", func(t *testing.T) {
+		text := callTool(t, c, "myapi_http_get", map[string]any{"path": "/pets"})
+		assert.NotEmpty(t, text)
+	})
+
+	t.Run("myapi__http_get does not exist (double underscore)", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "myapi__http_get", map[string]any{"path": "/pets"})
+		assert.Error(t, err)
 	})
 }
 

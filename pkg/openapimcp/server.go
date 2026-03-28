@@ -55,9 +55,16 @@ func (s *Server) Start(ctx context.Context) error {
 		server.WithToolCapabilities(true),
 	)
 
-	tools.RegisterHTTPTools(s.mcpSrv, s.registry, s.client)
-	tools.RegisterExploreTools(s.mcpSrv, s.registry)
-	tools.RegisterSchemaTools(s.mcpSrv, s.registry)
+	effectivePrefix := strings.TrimRight(s.cfg.Server.ToolPrefix, "_")
+	if effectivePrefix != "" {
+		fmt.Fprintf(os.Stderr, "[prograpimcp] tool prefix: %s (6 tools registered)\n", effectivePrefix)
+	} else {
+		fmt.Fprintf(os.Stderr, "[prograpimcp] tool prefix: none\n")
+	}
+
+	tools.RegisterHTTPTools(s.mcpSrv, s.registry, s.client, effectivePrefix)
+	tools.RegisterExploreTools(s.mcpSrv, s.registry, effectivePrefix)
+	tools.RegisterSchemaTools(s.mcpSrv, s.registry, effectivePrefix)
 
 	transport := s.cfg.Server.Transport
 	if transport == "" {

@@ -90,6 +90,83 @@ func TestConfigValidate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// ToolPrefix validation
+		{
+			name: "tool_prefix valid simple",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "myapi"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "tool_prefix with trailing underscore stripped silently",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "myapi_"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "tool_prefix empty string is valid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: ""},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "tool_prefix starts with digit is invalid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "123abc"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: true,
+			errMsg:  "tool_prefix",
+		},
+		{
+			name: "tool_prefix purely numeric is invalid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "123"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: true,
+			errMsg:  "tool_prefix",
+		},
+		{
+			name: "tool_prefix contains hyphen is invalid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "my-api"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: true,
+			errMsg:  "tool_prefix",
+		},
+		{
+			name: "tool_prefix contains space is invalid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "my api"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: true,
+			errMsg:  "tool_prefix",
+		},
+		{
+			name: "tool_prefix starts with letter+digits is valid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "v2svc"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "tool_prefix starts with underscore is valid",
+			cfg: config.Config{
+				Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "_internal"},
+				APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -105,6 +182,22 @@ func TestConfigValidate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToolPrefixPrecedence(t *testing.T) {
+	// Simulates CLI flag overriding config-file value: after loading config with
+	// ToolPrefix "fromfile", the CLI wiring sets it to "fromcli".
+	cfg := config.Config{
+		Server: config.ServerConfig{Transport: "stdio", ToolPrefix: "fromfile"},
+		APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml"}},
+	}
+	require.NoError(t, cfg.Validate())
+	assert.Equal(t, "fromfile", cfg.Server.ToolPrefix)
+
+	// Simulate CLI override (equivalent of viper.GetString("server.tool_prefix") after flag set).
+	cfg.Server.ToolPrefix = "fromcli"
+	assert.Equal(t, "fromcli", cfg.Server.ToolPrefix)
+	require.NoError(t, cfg.Validate())
 }
 
 func TestLoadFile(t *testing.T) {

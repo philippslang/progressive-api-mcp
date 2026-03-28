@@ -18,8 +18,9 @@ type PathInfo struct {
 }
 
 // RegisterExploreTools registers the explore_api MCP tool.
-func RegisterExploreTools(s *server.MCPServer, reg *registry.Registry) {
-	s.AddTool(mcp.NewTool("explore_api",
+// prefix is prepended to the tool name; empty means no prefix.
+func RegisterExploreTools(s *server.MCPServer, reg *registry.Registry, prefix string) {
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "explore_api"),
 		mcp.WithDescription("List available API paths for progressive discovery"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs loaded)")),
 		mcp.WithString("prefix", mcp.Description("Filter: only return paths starting with this string")),

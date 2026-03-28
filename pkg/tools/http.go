@@ -246,10 +246,21 @@ func validateAndExecute(ctx context.Context, reg *registry.Registry, client *htt
 	return executeHTTP(ctx, client, entry, method, path, queryParams, headers, body)
 }
 
+// applyPrefix prepends prefix+"_" to name if prefix is non-empty (trailing "_" stripped first).
+// Returns name unchanged when prefix is empty.
+func applyPrefix(prefix, name string) string {
+	p := strings.TrimRight(prefix, "_")
+	if p == "" {
+		return name
+	}
+	return p + "_" + name
+}
+
 // RegisterHTTPTools registers the http_get, http_post, http_put, http_patch MCP tools.
-func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *httpclient.Client) {
+// prefix is prepended to each tool name (e.g. "myapi" → "myapi_http_get"); empty means no prefix.
+func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *httpclient.Client, prefix string) {
 	// http_get
-	s.AddTool(mcp.NewTool("http_get",
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_get"),
 		mcp.WithDescription("Execute a validated HTTP GET request against a loaded API"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
 		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted (e.g. /pets/42)")),
@@ -264,7 +275,7 @@ func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *http
 	})
 
 	// http_post
-	s.AddTool(mcp.NewTool("http_post",
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_post"),
 		mcp.WithDescription("Execute a validated HTTP POST request against a loaded API"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
 		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
@@ -281,7 +292,7 @@ func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *http
 	})
 
 	// http_put
-	s.AddTool(mcp.NewTool("http_put",
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_put"),
 		mcp.WithDescription("Execute a validated HTTP PUT request against a loaded API"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
 		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
@@ -298,7 +309,7 @@ func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *http
 	})
 
 	// http_patch
-	s.AddTool(mcp.NewTool("http_patch",
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_patch"),
 		mcp.WithDescription("Execute a validated HTTP PATCH request against a loaded API"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
 		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),

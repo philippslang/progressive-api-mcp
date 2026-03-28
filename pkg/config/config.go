@@ -4,10 +4,13 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+var validToolPrefix = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // Config is the top-level configuration for the MCP server.
 // It can be loaded from a YAML file or constructed programmatically.
@@ -21,6 +24,10 @@ type ServerConfig struct {
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port"`
 	Transport string `yaml:"transport"`
+	// ToolPrefix is an optional prefix prepended to all MCP tool names (e.g. "myapi" → "myapi_http_get").
+	// Must start with a letter or underscore; only letters, digits, and underscores are allowed.
+	// A trailing underscore is stripped automatically. Empty means no prefix.
+	ToolPrefix string `yaml:"tool_prefix"`
 }
 
 // APIConfig represents one OpenAPI-defined API to load at startup.
@@ -51,6 +58,10 @@ func (c Config) Validate() error {
 	}
 	if len(c.APIs) == 0 {
 		return fmt.Errorf("at least one API must be configured under apis")
+	}
+	prefix := strings.TrimRight(c.Server.ToolPrefix, "_")
+	if prefix != "" && !validToolPrefix.MatchString(prefix) {
+		return fmt.Errorf("server.tool_prefix %q is invalid: must start with a letter or underscore and contain only letters, digits, and underscores", c.Server.ToolPrefix)
 	}
 	seen := make(map[string]struct{})
 	for i, api := range c.APIs {

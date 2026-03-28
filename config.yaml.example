@@ -6,6 +6,10 @@ server:
   port: 8080                  # PROGRAPIMCP_SERVER_PORT / --port
   transport: "http"           # PROGRAPIMCP_SERVER_TRANSPORT / --transport
                               # Options: "http" (Streamable HTTP) or "stdio"
+  # tool_prefix: "myapi"     # PROGRAPIMCP_SERVER_TOOL_PREFIX / --tool-prefix
+                              # Optional. Prepends "myapi_" to all tool names (e.g. myapi_http_get).
+                              # Omit or leave empty for original names. Must start with a letter
+                              # or underscore; only letters, digits, underscores allowed.
 
 apis:
   - name: petstore                           # Unique identifier used in tool calls

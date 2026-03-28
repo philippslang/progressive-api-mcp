@@ -24,8 +24,9 @@ type SchemaResult struct {
 }
 
 // RegisterSchemaTools registers the get_schema MCP tool.
-func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry) {
-	s.AddTool(mcp.NewTool("get_schema",
+// prefix is prepended to the tool name; empty means no prefix.
+func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix string) {
+	s.AddTool(mcp.NewTool(applyPrefix(prefix, "get_schema"),
 		mcp.WithDescription("Return the full schema for one endpoint"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs loaded)")),
 		mcp.WithString("path", mcp.Required(), mcp.Description("OpenAPI path template or concrete path (e.g. /pets/{id} or /pets/42)")),

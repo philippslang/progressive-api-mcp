@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2026-03-28
 
 ## Active Technologies
+- Go 1.22+ (inherits from `001-openapi-mcp-server`) + No new dependencies (002-mcp-tool-prefix)
 
 - Go 1.22+ (001-openapi-mcp-server)
 
@@ -42,6 +43,7 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 002-mcp-tool-prefix: Added Go 1.22+ (inherits from `001-openapi-mcp-server`) + No new dependencies
 
 - 001-openapi-mcp-server: Added Go 1.22+
 
