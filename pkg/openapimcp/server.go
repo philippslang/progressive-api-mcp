@@ -101,7 +101,7 @@ func (s *Server) Start(ctx context.Context) error {
 			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprint(w, `{"status":"ok"}`)
 		})
-		httpServer := &http.Server{Addr: addr, Handler: mux}
+		httpServer := &http.Server{Addr: addr, Handler: loggingMiddleware(mux)}
 
 		// Start the server in a goroutine so we can watch ctx.
 		errCh := make(chan error, 1)
@@ -163,4 +163,28 @@ func (s *Server) APIs() []string {
 		return nil
 	}
 	return s.registry.ListNames()
+}
+
+// responseWriter wraps http.ResponseWriter to capture the written status code.
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+// loggingMiddleware wraps h and writes one log line per request to stderr:
+// [prograpimcp] METHOD /path?query STATUS Xms
+func loggingMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		h.ServeHTTP(rw, r)
+		uri := r.URL.RequestURI()
+		fmt.Fprintf(os.Stderr, "[prograpimcp] %s %s %d %dms\n",
+			r.Method, uri, rw.status, time.Since(start).Milliseconds())
+	})
 }
