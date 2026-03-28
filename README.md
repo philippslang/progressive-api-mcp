@@ -1,4 +1,4 @@
-# prograpimcp
+# Progressive API MCP Server
 
 An MCP server that exposes OpenAPI-defined REST APIs to AI agents — without turning every endpoint into a separate tool.
 
