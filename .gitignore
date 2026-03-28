@@ -56,3 +56,4 @@ config.yaml
 main
 client
 server
+mock_*

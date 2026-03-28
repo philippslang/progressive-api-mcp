@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-28
 - Go 1.22+ + mark3labs/mcp-go v0.46.0 (StreamableHTTPServer), standard library `net/http` (004-health-endpoint)
 - Go 1.22+ + Standard library `net/http`, `fmt`, `os`, `time` — no new dependencies (005-http-request-logging)
 - Go 1.22+ + `github.com/mark3labs/mcp-go/client`, `github.com/mark3labs/mcp-go/client/transport`, `github.com/mark3labs/mcp-go/mcp` — all already in go.mod; no new dependencies (006-mcp-test-client)
+- Go 1.22+ + `cobra` (CLI), `net/http` stdlib (HTTP server), `encoding/json` stdlib (JSON responses), `sync` stdlib (RWMutex for in-memory store) (008-mock-api-servers)
+- In-memory only (`sync.RWMutex`-protected maps); no disk persistence (008-mock-api-servers)
 
 - Go 1.22+ (001-openapi-mcp-server)
 
@@ -48,9 +50,9 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 008-mock-api-servers: Added Go 1.22+ + `cobra` (CLI), `net/http` stdlib (HTTP server), `encoding/json` stdlib (JSON responses), `sync` stdlib (RWMutex for in-memory store)
 - 006-mcp-test-client: Added Go 1.22+ + `github.com/mark3labs/mcp-go/client`, `github.com/mark3labs/mcp-go/client/transport`, `github.com/mark3labs/mcp-go/mcp` — all already in go.mod; no new dependencies
 - 005-http-request-logging: Added Go 1.22+ + Standard library `net/http`, `fmt`, `os`, `time` — no new dependencies
-- 004-health-endpoint: Added Go 1.22+ + mark3labs/mcp-go v0.46.0 (StreamableHTTPServer), standard library `net/http`
 
 
 <!-- MANUAL ADDITIONS START -->
