@@ -1,0 +1,63 @@
+// mcpls connects to an MCP server and lists all registered tool names, one per line.
+//
+// Usage: mcpls <mcp-endpoint-url>
+//
+// Example: mcpls http://127.0.0.1:8000/mcp
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
+)
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintln(os.Stderr, "usage: mcpls <mcp-endpoint-url>")
+		os.Exit(1)
+	}
+	url := os.Args[1]
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	c, err := client.NewStreamableHttpClient(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mcpls: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := c.Start(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "mcpls: cannot connect to %s: %v\n", url, err)
+		os.Exit(1)
+	}
+	defer c.Close()
+
+	_, err = c.Initialize(ctx, mcp.InitializeRequest{
+		Params: mcp.InitializeParams{
+			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+			ClientInfo: mcp.Implementation{
+				Name:    "mcpls",
+				Version: "1.0.0",
+			},
+		},
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mcpls: MCP initialization failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	result, err := c.ListTools(ctx, mcp.ListToolsRequest{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mcpls: failed to list tools: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, tool := range result.Tools {
+		fmt.Println(tool.Name)
+	}
+}

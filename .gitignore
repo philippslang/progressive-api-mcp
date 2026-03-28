@@ -54,3 +54,5 @@ go.work.sum
 .specify/
 config.yaml
 main
+client
+server
