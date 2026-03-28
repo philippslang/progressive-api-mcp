@@ -25,7 +25,11 @@ type SchemaResult struct {
 
 // RegisterSchemaTools registers the get_schema MCP tool.
 // prefix is prepended to the tool name; empty means no prefix.
-func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix string) {
+// allowedTools restricts whether the tool is registered; nil means it is always registered.
+func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix string, allowedTools map[string]bool) {
+	if allowedTools != nil && !allowedTools["get_schema"] {
+		return
+	}
 	s.AddTool(mcp.NewTool(applyPrefix(prefix, "get_schema"),
 		mcp.WithDescription("Return the full schema for one endpoint"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs loaded)")),
@@ -60,6 +64,11 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 				fmt.Sprintf("path %q not found in API %q", path, entry.Name),
 				nil, nil)
 			return r, nil
+		}
+
+		// Check path allow list.
+		if !IsPathPermitted(matched, entry.AllowList.Paths["get_schema"]) {
+			return pathNotPermittedResult(matched, "get_schema", entry.Name)
 		}
 
 		model, errs := entry.Document().BuildV3Model()

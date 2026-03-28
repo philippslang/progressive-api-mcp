@@ -19,7 +19,11 @@ type PathInfo struct {
 
 // RegisterExploreTools registers the explore_api MCP tool.
 // prefix is prepended to the tool name; empty means no prefix.
-func RegisterExploreTools(s *server.MCPServer, reg *registry.Registry, prefix string) {
+// allowedTools restricts whether the tool is registered; nil means it is always registered.
+func RegisterExploreTools(s *server.MCPServer, reg *registry.Registry, prefix string, allowedTools map[string]bool) {
+	if allowedTools != nil && !allowedTools["explore_api"] {
+		return
+	}
 	s.AddTool(mcp.NewTool(applyPrefix(prefix, "explore_api"),
 		mcp.WithDescription("List available API paths for progressive discovery"),
 		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs loaded)")),
@@ -69,6 +73,17 @@ func RegisterExploreTools(s *server.MCPServer, reg *registry.Registry, prefix st
 				}
 				paths = append(paths, PathInfo{Path: p, Methods: methods, Description: desc})
 			}
+		}
+
+		// Apply path allow-list filter (before prefix filter so both stack).
+		if allowedPaths := entry.AllowList.Paths["explore_api"]; len(allowedPaths) > 0 {
+			filtered := paths[:0]
+			for _, pi := range paths {
+				if IsPathPermitted(pi.Path, allowedPaths) {
+					filtered = append(filtered, pi)
+				}
+			}
+			paths = filtered
 		}
 
 		sort.Slice(paths, func(i, j int) bool { return paths[i].Path < paths[j].Path })

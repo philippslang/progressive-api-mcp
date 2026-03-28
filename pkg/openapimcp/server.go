@@ -56,15 +56,16 @@ func (s *Server) Start(ctx context.Context) error {
 	)
 
 	effectivePrefix := strings.TrimRight(s.cfg.Server.ToolPrefix, "_")
+	allowedTools := computeAllowedTools(s.cfg.APIs)
 	if effectivePrefix != "" {
-		fmt.Fprintf(os.Stderr, "[prograpimcp] tool prefix: %s (6 tools registered)\n", effectivePrefix)
+		fmt.Fprintf(os.Stderr, "[prograpimcp] tool prefix: %s\n", effectivePrefix)
 	} else {
 		fmt.Fprintf(os.Stderr, "[prograpimcp] tool prefix: none\n")
 	}
 
-	tools.RegisterHTTPTools(s.mcpSrv, s.registry, s.client, effectivePrefix)
-	tools.RegisterExploreTools(s.mcpSrv, s.registry, effectivePrefix)
-	tools.RegisterSchemaTools(s.mcpSrv, s.registry, effectivePrefix)
+	tools.RegisterHTTPTools(s.mcpSrv, s.registry, s.client, effectivePrefix, allowedTools)
+	tools.RegisterExploreTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
+	tools.RegisterSchemaTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
 
 	transport := s.cfg.Server.Transport
 	if transport == "" {
@@ -108,6 +109,28 @@ func (s *Server) Start(ctx context.Context) error {
 	default:
 		return fmt.Errorf("unsupported transport %q", transport)
 	}
+}
+
+// computeAllowedTools returns a union map of allowed tool names across all API configs.
+// Returns nil when all APIs have empty AllowList.Tools (allow-all semantics).
+func computeAllowedTools(apis []config.APIConfig) map[string]bool {
+	anyRestricted := false
+	for _, api := range apis {
+		if len(api.AllowList.Tools) > 0 {
+			anyRestricted = true
+			break
+		}
+	}
+	if !anyRestricted {
+		return nil
+	}
+	union := make(map[string]bool)
+	for _, api := range apis {
+		for _, name := range api.AllowList.Tools {
+			union[name] = true
+		}
+	}
+	return union
 }
 
 // Stop signals the server to shut down gracefully.

@@ -207,6 +207,11 @@ func validateAndExecute(ctx context.Context, reg *registry.Registry, client *htt
 		return r, nil
 	}
 
+	// Check path allow list.
+	if !IsPathPermitted(matched, entry.AllowList.Paths[method2tool(method)]) {
+		return pathNotPermittedResult(matched, method2tool(method), entry.Name)
+	}
+
 	// Build a synthetic request for validation.
 	var bodyReader io.Reader
 	if body != nil {
@@ -256,74 +261,126 @@ func applyPrefix(prefix, name string) string {
 	return p + "_" + name
 }
 
+// method2tool maps an HTTP method string to its MCP tool base name.
+func method2tool(method string) string {
+	switch method {
+	case "GET":
+		return "http_get"
+	case "POST":
+		return "http_post"
+	case "PUT":
+		return "http_put"
+	case "PATCH":
+		return "http_patch"
+	default:
+		return strings.ToLower("http_" + method)
+	}
+}
+
+// IsPathPermitted returns true when allowed is nil/empty (allow-all) or template is in the list.
+func IsPathPermitted(template string, allowed []string) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	for _, p := range allowed {
+		if p == template {
+			return true
+		}
+	}
+	return false
+}
+
+// toolNotPermittedResult returns a PATH_NOT_PERMITTED ToolError result.
+func toolNotPermittedResult(toolName, apiName string) (*mcp.CallToolResult, error) {
+	return toolErrorResult("TOOL_NOT_PERMITTED",
+		fmt.Sprintf("tool %q is not permitted for API %q", toolName, apiName),
+		nil, nil)
+}
+
+// pathNotPermittedResult returns a PATH_NOT_PERMITTED ToolError result.
+func pathNotPermittedResult(path, toolName, apiName string) (*mcp.CallToolResult, error) {
+	return toolErrorResult("PATH_NOT_PERMITTED",
+		fmt.Sprintf("path %q is not in the allow list for %s on API %q", path, toolName, apiName),
+		nil, nil)
+}
+
 // RegisterHTTPTools registers the http_get, http_post, http_put, http_patch MCP tools.
-// prefix is prepended to each tool name (e.g. "myapi" → "myapi_http_get"); empty means no prefix.
-func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *httpclient.Client, prefix string) {
+// prefix is prepended to each tool name; empty means no prefix.
+// allowedTools restricts which tools are registered; nil means all four are registered.
+func RegisterHTTPTools(s *server.MCPServer, reg *registry.Registry, client *httpclient.Client, prefix string, allowedTools map[string]bool) {
 	// http_get
-	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_get"),
-		mcp.WithDescription("Execute a validated HTTP GET request against a loaded API"),
-		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
-		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted (e.g. /pets/42)")),
-		mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
-		mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
-	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		apiName := req.GetString("api", "")
-		path := req.GetString("path", "")
-		queryParams := toStringMap(req.GetArguments()["query_params"])
-		headers := toStringMap(req.GetArguments()["headers"])
-		return validateAndExecute(ctx, reg, client, "GET", apiName, path, queryParams, headers, nil)
-	})
+	if allowedTools == nil || allowedTools["http_get"] {
+		s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_get"),
+			mcp.WithDescription("Execute a validated HTTP GET request against a loaded API"),
+			mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
+			mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted (e.g. /pets/42)")),
+			mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
+			mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
+		), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiName := req.GetString("api", "")
+			path := req.GetString("path", "")
+			queryParams := toStringMap(req.GetArguments()["query_params"])
+			headers := toStringMap(req.GetArguments()["headers"])
+			return validateAndExecute(ctx, reg, client, "GET", apiName, path, queryParams, headers, nil)
+		})
+	}
 
 	// http_post
-	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_post"),
-		mcp.WithDescription("Execute a validated HTTP POST request against a loaded API"),
-		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
-		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
-		mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
-		mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
-		mcp.WithObject("body", mcp.Description("Request body (must conform to the endpoint schema)")),
-	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		apiName := req.GetString("api", "")
-		path := req.GetString("path", "")
-		queryParams := toStringMap(req.GetArguments()["query_params"])
-		headers := toStringMap(req.GetArguments()["headers"])
-		body := req.GetArguments()["body"]
-		return validateAndExecute(ctx, reg, client, "POST", apiName, path, queryParams, headers, body)
-	})
+	if allowedTools == nil || allowedTools["http_post"] {
+		s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_post"),
+			mcp.WithDescription("Execute a validated HTTP POST request against a loaded API"),
+			mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
+			mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
+			mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
+			mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
+			mcp.WithObject("body", mcp.Description("Request body (must conform to the endpoint schema)")),
+		), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiName := req.GetString("api", "")
+			path := req.GetString("path", "")
+			queryParams := toStringMap(req.GetArguments()["query_params"])
+			headers := toStringMap(req.GetArguments()["headers"])
+			body := req.GetArguments()["body"]
+			return validateAndExecute(ctx, reg, client, "POST", apiName, path, queryParams, headers, body)
+		})
+	}
 
 	// http_put
-	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_put"),
-		mcp.WithDescription("Execute a validated HTTP PUT request against a loaded API"),
-		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
-		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
-		mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
-		mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
-		mcp.WithObject("body", mcp.Description("Request body")),
-	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		apiName := req.GetString("api", "")
-		path := req.GetString("path", "")
-		queryParams := toStringMap(req.GetArguments()["query_params"])
-		headers := toStringMap(req.GetArguments()["headers"])
-		body := req.GetArguments()["body"]
-		return validateAndExecute(ctx, reg, client, "PUT", apiName, path, queryParams, headers, body)
-	})
+	if allowedTools == nil || allowedTools["http_put"] {
+		s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_put"),
+			mcp.WithDescription("Execute a validated HTTP PUT request against a loaded API"),
+			mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
+			mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
+			mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
+			mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
+			mcp.WithObject("body", mcp.Description("Request body")),
+		), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiName := req.GetString("api", "")
+			path := req.GetString("path", "")
+			queryParams := toStringMap(req.GetArguments()["query_params"])
+			headers := toStringMap(req.GetArguments()["headers"])
+			body := req.GetArguments()["body"]
+			return validateAndExecute(ctx, reg, client, "PUT", apiName, path, queryParams, headers, body)
+		})
+	}
 
 	// http_patch
-	s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_patch"),
-		mcp.WithDescription("Execute a validated HTTP PATCH request against a loaded API"),
-		mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
-		mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
-		mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
-		mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
-		mcp.WithObject("body", mcp.Description("Request body (partial update)")),
-	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		apiName := req.GetString("api", "")
-		path := req.GetString("path", "")
-		queryParams := toStringMap(req.GetArguments()["query_params"])
-		headers := toStringMap(req.GetArguments()["headers"])
-		body := req.GetArguments()["body"]
-		return validateAndExecute(ctx, reg, client, "PATCH", apiName, path, queryParams, headers, body)
-	})
+	if allowedTools == nil || allowedTools["http_patch"] {
+		s.AddTool(mcp.NewTool(applyPrefix(prefix, "http_patch"),
+			mcp.WithDescription("Execute a validated HTTP PATCH request against a loaded API"),
+			mcp.WithString("api", mcp.Description("API identifier (required when multiple APIs are loaded)")),
+			mcp.WithString("path", mcp.Required(), mcp.Description("Concrete path with parameters substituted")),
+			mcp.WithObject("query_params", mcp.Description("Key-value pairs appended as query string parameters")),
+			mcp.WithObject("headers", mcp.Description("Key-value pairs added as request headers")),
+			mcp.WithObject("body", mcp.Description("Request body (partial update)")),
+		), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiName := req.GetString("api", "")
+			path := req.GetString("path", "")
+			queryParams := toStringMap(req.GetArguments()["query_params"])
+			headers := toStringMap(req.GetArguments()["headers"])
+			body := req.GetArguments()["body"]
+			return validateAndExecute(ctx, reg, client, "PATCH", apiName, path, queryParams, headers, body)
+		})
+	}
 }
 
 func toStringMap(v any) map[string]string {

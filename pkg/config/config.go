@@ -12,6 +12,31 @@ import (
 
 var validToolPrefix = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
+// knownToolNames is the fixed set of base MCP tool names.
+var knownToolNames = map[string]struct{}{
+	"explore_api": {},
+	"get_schema":  {},
+	"http_get":    {},
+	"http_post":   {},
+	"http_put":    {},
+	"http_patch":  {},
+}
+
+const knownToolNamesHint = "explore_api, get_schema, http_get, http_post, http_put, http_patch"
+
+// APIAllowList restricts which MCP tools and paths are available for one API entry.
+// Zero value means no restrictions: all tools registered, all paths accessible.
+type APIAllowList struct {
+	// Tools is the list of base tool names to register for this API.
+	// Nil or empty means all 6 tools are allowed.
+	// Valid values: "explore_api", "get_schema", "http_get", "http_post", "http_put", "http_patch".
+	Tools []string `yaml:"tools"`
+	// Paths maps each base tool name to the OpenAPI path templates it may access.
+	// Nil or empty map means all paths are allowed for all tools.
+	// An empty slice for a tool means the tool is registered but no paths are accessible.
+	Paths map[string][]string `yaml:"paths"`
+}
+
 // Config is the top-level configuration for the MCP server.
 // It can be loaded from a YAML file or constructed programmatically.
 type Config struct {
@@ -32,10 +57,13 @@ type ServerConfig struct {
 
 // APIConfig represents one OpenAPI-defined API to load at startup.
 type APIConfig struct {
-	Name       string `yaml:"name"`
-	Definition string `yaml:"definition"`
-	Host       string `yaml:"host"`
-	BasePath   string `yaml:"base_path"`
+	Name       string       `yaml:"name"`
+	Definition string       `yaml:"definition"`
+	Host       string       `yaml:"host"`
+	BasePath   string       `yaml:"base_path"`
+	// AllowList restricts which tools and paths are available for this API.
+	// Zero value means no restrictions (all tools and paths allowed).
+	AllowList  APIAllowList `yaml:"allow_list"`
 }
 
 // Validate returns an error if the Config is invalid.
@@ -70,6 +98,16 @@ func (c Config) Validate() error {
 		}
 		if api.Definition == "" {
 			return fmt.Errorf("apis[%d].definition must not be empty (API: %q)", i, api.Name)
+		}
+		for j, tool := range api.AllowList.Tools {
+			if _, ok := knownToolNames[tool]; !ok {
+				return fmt.Errorf("apis[%d].allow_list.tools[%d]: unknown tool name %q; valid names are: %s", i, j, tool, knownToolNamesHint)
+			}
+		}
+		for tool := range api.AllowList.Paths {
+			if _, ok := knownToolNames[tool]; !ok {
+				return fmt.Errorf("apis[%d].allow_list.paths: unknown tool name %q; valid names are: %s", i, tool, knownToolNamesHint)
+			}
 		}
 		lower := strings.ToLower(api.Name)
 		if _, ok := seen[lower]; ok {

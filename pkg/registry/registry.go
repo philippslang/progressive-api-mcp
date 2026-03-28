@@ -22,6 +22,9 @@ type APIEntry struct {
 	BaseURL string
 	// Validator validates HTTP requests against this API's schema.
 	Validator *validator.Validator
+	// AllowList restricts which tools and paths are accessible for this API.
+	// Copied from Config.AllowList at load time. Zero value means allow all.
+	AllowList config.APIAllowList
 	// doc is the parsed libopenapi document.
 	doc libopenapi.Document
 }
@@ -63,6 +66,7 @@ func (r *Registry) Load(cfg config.APIConfig) error {
 		Config:    cfg,
 		BaseURL:   baseURL,
 		Validator: v,
+		AllowList: cfg.AllowList,
 		doc:       doc,
 	}
 	idx := len(r.entries)

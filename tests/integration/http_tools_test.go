@@ -38,10 +38,23 @@ func makeTestClient(t *testing.T, reg *registry.Registry, httpClient *httpclient
 // makeTestClientWithPrefix builds an MCPServer with the given registry and tool prefix.
 func makeTestClientWithPrefix(t *testing.T, prefix string, reg *registry.Registry, httpClient *httpclient.Client) *client.Client {
 	t.Helper()
+	return makeTestClientFull(t, prefix, nil, reg, httpClient)
+}
+
+// makeTestClientWithAllowedTools builds an MCPServer with the given tool allow map.
+// allowedTools nil means all tools allowed.
+func makeTestClientWithAllowedTools(t *testing.T, allowedTools map[string]bool, reg *registry.Registry, httpClient *httpclient.Client) *client.Client {
+	t.Helper()
+	return makeTestClientFull(t, "", allowedTools, reg, httpClient)
+}
+
+// makeTestClientFull builds an MCPServer with prefix and allowedTools control.
+func makeTestClientFull(t *testing.T, prefix string, allowedTools map[string]bool, reg *registry.Registry, httpClient *httpclient.Client) *client.Client {
+	t.Helper()
 	srv := mcpserver.NewMCPServer("test", "1.0.0", mcpserver.WithToolCapabilities(true))
-	tools.RegisterHTTPTools(srv, reg, httpClient, prefix)
-	tools.RegisterExploreTools(srv, reg, prefix)
-	tools.RegisterSchemaTools(srv, reg, prefix)
+	tools.RegisterHTTPTools(srv, reg, httpClient, prefix, allowedTools)
+	tools.RegisterExploreTools(srv, reg, prefix, allowedTools)
+	tools.RegisterSchemaTools(srv, reg, prefix, allowedTools)
 
 	tr := transport.NewInProcessTransport(srv)
 	c := client.NewClient(tr)
@@ -410,6 +423,213 @@ func TestTrailingUnderscoreStripped(t *testing.T) {
 
 	t.Run("myapi__http_get does not exist (double underscore)", func(t *testing.T) {
 		_, err := callToolRaw(t, c, "myapi__http_get", map[string]any{"path": "/pets"})
+		assert.Error(t, err)
+	})
+}
+
+// TestToolAllowList verifies that tools absent from the allow map are not registered in the session.
+func TestToolAllowList(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	allowedTools := map[string]bool{"explore_api": true, "http_get": true, "get_schema": true}
+	c := makeTestClientWithAllowedTools(t, allowedTools, reg, httpClient)
+
+	t.Run("explore_api succeeds when in allow map", func(t *testing.T) {
+		text := callTool(t, c, "explore_api", map[string]any{})
+		var paths []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &paths))
+		assert.Greater(t, len(paths), 0)
+	})
+
+	t.Run("http_post absent from session when not in allow map", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "http_post", map[string]any{"path": "/pets", "body": map[string]any{"name": "Fido", "species": "dog"}})
+		assert.Error(t, err, "http_post should not exist in the MCP session")
+	})
+
+	t.Run("http_put absent from session when not in allow map", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "http_put", map[string]any{"path": "/pets/1"})
+		assert.Error(t, err)
+	})
+}
+
+// TestDefaultAllToolsAllowed verifies that nil allowedTools registers all 6 tools.
+func TestDefaultAllToolsAllowed(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClientWithAllowedTools(t, nil, reg, httpClient)
+
+	t.Run("explore_api available with nil allowedTools", func(t *testing.T) {
+		text := callTool(t, c, "explore_api", map[string]any{})
+		var paths []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &paths))
+		assert.Greater(t, len(paths), 0)
+	})
+
+	t.Run("http_get available with nil allowedTools", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/pets"})
+		assert.NotEmpty(t, text)
+	})
+
+	t.Run("http_post available with nil allowedTools", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "http_post", map[string]any{"path": "/pets"})
+		assert.NoError(t, err)
+	})
+}
+
+// TestPathAllowList verifies that per-tool path restrictions reject disallowed paths.
+func TestPathAllowList(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]map[string]any{{"id": 1, "name": "Fido"}})
+	}))
+	defer target.Close()
+
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       target.URL,
+		AllowList: config.APIAllowList{
+			Paths: map[string][]string{
+				"http_get": {"/pets"},
+			},
+		},
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("http_get /pets succeeds — in allow list", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/pets"})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+
+	t.Run("http_get /owners rejected — PATH_NOT_PERMITTED", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/owners"})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, "PATH_NOT_PERMITTED", result["code"])
+	})
+}
+
+// TestExplorePathAllowList verifies explore_api filters its result to allowed paths.
+func TestExplorePathAllowList(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       "http://localhost:8080",
+		AllowList: config.APIAllowList{
+			Paths: map[string][]string{
+				"explore_api": {"/pets", "/pets/{id}"},
+			},
+		},
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("explore_api returns only allowed paths", func(t *testing.T) {
+		text := callTool(t, c, "explore_api", map[string]any{})
+		var paths []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &paths))
+		require.NotEmpty(t, paths)
+		for _, p := range paths {
+			pathStr := p["path"].(string)
+			assert.True(t, pathStr == "/pets" || pathStr == "/pets/{id}",
+				"expected only /pets or /pets/{id}, got %s", pathStr)
+		}
+	})
+}
+
+// TestDefaultAllPathsAllowed verifies that absent AllowList.Paths allows all paths.
+func TestDefaultAllPathsAllowed(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+	}))
+	defer target.Close()
+
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       target.URL,
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("http_get /pets accessible with no path restriction", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/pets"})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+
+	t.Run("http_get /owners accessible with no path restriction", func(t *testing.T) {
+		text := callTool(t, c, "http_get", map[string]any{"path": "/owners"})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+}
+
+// TestCombinedAllowList verifies tool-level and path-level restrictions compose correctly.
+func TestCombinedAllowList(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": 1, "name": "Fido", "species": "dog"})
+	}))
+	defer target.Close()
+
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "petstore",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       target.URL,
+		AllowList: config.APIAllowList{
+			Tools: []string{"explore_api", "http_get", "http_post"},
+			Paths: map[string][]string{
+				"http_post": {"/pets"},
+			},
+		},
+	}))
+	httpClient := httpclient.New(10 * time.Second)
+	allowedTools := map[string]bool{"explore_api": true, "http_get": true, "http_post": true}
+	c := makeTestClientWithAllowedTools(t, allowedTools, reg, httpClient)
+
+	t.Run("http_post /pets executes — tool and path both allowed", func(t *testing.T) {
+		text := callTool(t, c, "http_post", map[string]any{
+			"path": "/pets",
+			"body": map[string]any{"name": "Fido", "species": "dog"},
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+
+	t.Run("http_post /owners returns PATH_NOT_PERMITTED", func(t *testing.T) {
+		text := callTool(t, c, "http_post", map[string]any{
+			"path": "/owners",
+			"body": map[string]any{"name": "Alice"},
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, "PATH_NOT_PERMITTED", result["code"])
+	})
+
+	t.Run("http_put absent from session", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "http_put", map[string]any{"path": "/pets/1"})
 		assert.Error(t, err)
 	})
 }

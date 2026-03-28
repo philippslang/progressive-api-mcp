@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/prograpimcp/prograpimcp/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,6 +58,35 @@ func TestPathInfoShape(t *testing.T) {
 	assert.Contains(t, result[0], "path")
 	assert.Contains(t, result[0], "methods")
 	assert.Contains(t, result[0], "description")
+}
+
+// TestAPIAllowListShape verifies the APIAllowList config struct shape.
+func TestAPIAllowListShape(t *testing.T) {
+	al := config.APIAllowList{
+		Tools: []string{"http_get"},
+		Paths: map[string][]string{"http_get": {"/pets"}},
+	}
+	assert.Equal(t, []string{"http_get"}, al.Tools)
+	assert.Equal(t, []string{"/pets"}, al.Paths["http_get"])
+}
+
+// TestToolErrorPathNotPermitted verifies PATH_NOT_PERMITTED ToolError shape.
+func TestToolErrorPathNotPermitted(t *testing.T) {
+	raw := `{"code":"PATH_NOT_PERMITTED","message":"path \"/owners\" is not in the allow list for http_get on API \"petstore\""}`
+	var result map[string]any
+	err := json.Unmarshal([]byte(raw), &result)
+	require.NoError(t, err)
+	assert.Equal(t, "PATH_NOT_PERMITTED", result["code"])
+	assert.Contains(t, result["message"], "/owners")
+}
+
+// TestToolErrorToolNotPermitted verifies TOOL_NOT_PERMITTED ToolError shape.
+func TestToolErrorToolNotPermitted(t *testing.T) {
+	raw := `{"code":"TOOL_NOT_PERMITTED","message":"tool \"http_post\" is not permitted for API \"petstore\""}`
+	var result map[string]any
+	err := json.Unmarshal([]byte(raw), &result)
+	require.NoError(t, err)
+	assert.Equal(t, "TOOL_NOT_PERMITTED", result["code"])
 }
 
 // TestSchemaResultShape verifies the SchemaResult JSON shape used by get_schema.

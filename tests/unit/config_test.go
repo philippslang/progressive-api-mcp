@@ -184,6 +184,85 @@ func TestConfigValidate(t *testing.T) {
 	}
 }
 
+func TestAPIAllowListValidation(t *testing.T) {
+	validBase := func(allowList config.APIAllowList) config.Config {
+		return config.Config{
+			Server: config.ServerConfig{Transport: "stdio"},
+			APIs:   []config.APIConfig{{Name: "petstore", Definition: "./petstore.yaml", AllowList: allowList}},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		cfg     config.Config
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "all 6 tools explicitly listed — valid",
+			cfg:     validBase(config.APIAllowList{Tools: []string{"explore_api", "get_schema", "http_get", "http_post", "http_put", "http_patch"}}),
+			wantErr: false,
+		},
+		{
+			name:    "explore_api alone — valid",
+			cfg:     validBase(config.APIAllowList{Tools: []string{"explore_api"}}),
+			wantErr: false,
+		},
+		{
+			name:    "empty Tools slice — valid (allow all)",
+			cfg:     validBase(config.APIAllowList{Tools: []string{}}),
+			wantErr: false,
+		},
+		{
+			name:    "nil Tools — valid (allow all)",
+			cfg:     validBase(config.APIAllowList{}),
+			wantErr: false,
+		},
+		{
+			name:    "unknown tool name in Tools — error",
+			cfg:     validBase(config.APIAllowList{Tools: []string{"http_get", "http_delete"}}),
+			wantErr: true,
+			errMsg:  "unknown tool name",
+		},
+		{
+			name:    "unknown key in Paths map — error",
+			cfg:     validBase(config.APIAllowList{Paths: map[string][]string{"http_delete": {"/pets"}}}),
+			wantErr: true,
+			errMsg:  "unknown tool name",
+		},
+		{
+			name: "tool in Paths but not in Tools — valid (dormant restriction)",
+			cfg: validBase(config.APIAllowList{
+				Tools: []string{"explore_api"},
+				Paths: map[string][]string{"http_get": {"/pets"}},
+			}),
+			wantErr: false,
+		},
+		{
+			name: "valid paths restriction",
+			cfg: validBase(config.APIAllowList{
+				Tools: []string{"http_get"},
+				Paths: map[string][]string{"http_get": {"/pets", "/pets/{id}"}},
+			}),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestToolPrefixPrecedence(t *testing.T) {
 	// Simulates CLI flag overriding config-file value: after loading config with
 	// ToolPrefix "fromfile", the CLI wiring sets it to "fromcli".
