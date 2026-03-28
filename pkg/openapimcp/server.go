@@ -4,6 +4,7 @@ package openapimcp
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -90,20 +91,33 @@ func (s *Server) Start(ctx context.Context) error {
 			port = 8080
 		}
 		addr := fmt.Sprintf("%s:%d", host, port)
-		fmt.Fprintf(os.Stderr, "[prograpimcp] MCP endpoint: http://%s/mcp\n", addr)
+		fmt.Fprintf(os.Stderr, "[prograpimcp] MCP endpoint:    http://%s/mcp\n", addr)
+		fmt.Fprintf(os.Stderr, "[prograpimcp] health endpoint: http://%s/health\n", addr)
 		httpSrv := server.NewStreamableHTTPServer(s.mcpSrv)
+
+		mux := http.NewServeMux()
+		mux.Handle("/mcp", httpSrv)
+		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"status":"ok"}`)
+		})
+		httpServer := &http.Server{Addr: addr, Handler: mux}
 
 		// Start the server in a goroutine so we can watch ctx.
 		errCh := make(chan error, 1)
 		go func() {
-			errCh <- httpSrv.Start(addr)
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				errCh <- err
+			} else {
+				errCh <- nil
+			}
 		}()
 
 		select {
 		case <-ctx2.Done():
 			shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer shutCancel()
-			return httpSrv.Shutdown(shutCtx)
+			return httpServer.Shutdown(shutCtx)
 		case err := <-errCh:
 			return err
 		}
