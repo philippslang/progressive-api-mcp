@@ -52,3 +52,5 @@ go.work.sum
 
 .claude/
 .specify/
+config.yaml
+main
