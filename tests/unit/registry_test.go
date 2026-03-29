@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/prograpimcp/prograpimcp/pkg/config"
-	"github.com/prograpimcp/prograpimcp/pkg/registry"
+	"github.com/philippslang/progressive-api-mcp/pkg/config"
+	"github.com/philippslang/progressive-api-mcp/pkg/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

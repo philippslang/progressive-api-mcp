@@ -7,7 +7,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/prograpimcp/prograpimcp/pkg/registry"
+	"github.com/philippslang/progressive-api-mcp/pkg/registry"
 )
 
 // PathInfo is one entry in the exploration tool's result list.

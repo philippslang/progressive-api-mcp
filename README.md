@@ -68,7 +68,7 @@ PROGRAPIMCP_SERVER_TOOL_PREFIX=myapi ./prograpimcp
 ## Using as a Go library
 
 ```go
-import "github.com/prograpimcp/prograpimcp/pkg/openapimcp"
+import "github.com/philippslang/progressive-api-mcp/pkg/openapimcp"
 
 srv, err := openapimcp.New(config.Config{
     Server: config.ServerConfig{Transport: "stdio"},

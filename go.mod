@@ -1,4 +1,4 @@
-module github.com/prograpimcp/prograpimcp
+module github.com/philippslang/progressive-api-mcp
 
 go 1.25.5
 

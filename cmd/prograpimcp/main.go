@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/prograpimcp/prograpimcp/pkg/config"
-	"github.com/prograpimcp/prograpimcp/pkg/openapimcp"
+	"github.com/philippslang/progressive-api-mcp/pkg/config"
+	"github.com/philippslang/progressive-api-mcp/pkg/openapimcp"
 )
 
 func main() {

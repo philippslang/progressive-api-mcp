@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/prograpimcp/prograpimcp/pkg/config"
-	"github.com/prograpimcp/prograpimcp/pkg/httpclient"
-	"github.com/prograpimcp/prograpimcp/pkg/registry"
-	"github.com/prograpimcp/prograpimcp/pkg/tools"
+	"github.com/philippslang/progressive-api-mcp/pkg/config"
+	"github.com/philippslang/progressive-api-mcp/pkg/httpclient"
+	"github.com/philippslang/progressive-api-mcp/pkg/registry"
+	"github.com/philippslang/progressive-api-mcp/pkg/tools"
 )
 
 // Server is the MCP server instance. Create with New(); start with Start().

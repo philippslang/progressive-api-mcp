@@ -13,8 +13,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/prograpimcp/prograpimcp/pkg/httpclient"
-	"github.com/prograpimcp/prograpimcp/pkg/registry"
+	"github.com/philippslang/progressive-api-mcp/pkg/httpclient"
+	"github.com/philippslang/progressive-api-mcp/pkg/registry"
 )
 
 // ToolError is the envelope returned by tools on failure.

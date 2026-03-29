@@ -3,7 +3,7 @@ package unit_test
 import (
 	"testing"
 
-	"github.com/prograpimcp/prograpimcp/pkg/loader"
+	"github.com/philippslang/progressive-api-mcp/pkg/loader"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

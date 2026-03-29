@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/pb33f/libopenapi"
-	"github.com/prograpimcp/prograpimcp/pkg/config"
-	"github.com/prograpimcp/prograpimcp/pkg/loader"
-	"github.com/prograpimcp/prograpimcp/pkg/validator"
+	"github.com/philippslang/progressive-api-mcp/pkg/config"
+	"github.com/philippslang/progressive-api-mcp/pkg/loader"
+	"github.com/philippslang/progressive-api-mcp/pkg/validator"
 )
 
 // APIEntry is a fully loaded and validated API.

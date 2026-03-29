@@ -10,7 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3high "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/prograpimcp/prograpimcp/pkg/registry"
+	"github.com/philippslang/progressive-api-mcp/pkg/registry"
 )
 
 // SchemaResult is the full schema for one endpoint.

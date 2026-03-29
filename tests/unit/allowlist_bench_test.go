@@ -3,7 +3,7 @@ package unit_test
 import (
 	"testing"
 
-	"github.com/prograpimcp/prograpimcp/pkg/tools"
+	"github.com/philippslang/progressive-api-mcp/pkg/tools"
 )
 
 func BenchmarkPathAllowCheck10(b *testing.B) {
