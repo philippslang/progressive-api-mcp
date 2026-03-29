@@ -68,6 +68,10 @@ type APIConfig struct {
 	// Ignored headers are excluded from get_schema output and are not required
 	// during request validation for any HTTP tool.
 	IgnoreHeaders []string `yaml:"ignore_headers"`
+	// ResponseBodyOnly controls the shape of HTTP tool responses.
+	// When true, HTTP tools return only the response body instead of the full
+	// { status_code, headers, body } envelope. Default: false.
+	ResponseBodyOnly bool `yaml:"response_body_only"`
 }
 
 // Validate returns an error if the Config is invalid.

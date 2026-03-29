@@ -12,6 +12,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-29
 - Go 1.22+ + `cobra` (CLI), `net/http` stdlib (HTTP server), `encoding/json` stdlib (JSON responses), `sync` stdlib (RWMutex for in-memory store) (008-mock-api-servers)
 - In-memory only (`sync.RWMutex`-protected maps); no disk persistence (008-mock-api-servers)
 - In-memory only (no persistence) (009-ignore-api-headers)
+- Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies (010-body-only-response)
 
 - Go 1.22+ (001-openapi-mcp-server)
 
@@ -51,9 +52,9 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 010-body-only-response: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
 - 009-ignore-api-headers: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator, spf13/cobra + viper — no new dependencies
 - 008-mock-api-servers: Added Go 1.22+ + `cobra` (CLI), `net/http` stdlib (HTTP server), `encoding/json` stdlib (JSON responses), `sync` stdlib (RWMutex for in-memory store)
-- 006-mcp-test-client: Added Go 1.22+ + `github.com/mark3labs/mcp-go/client`, `github.com/mark3labs/mcp-go/client/transport`, `github.com/mark3labs/mcp-go/mcp` — all already in go.mod; no new dependencies
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -29,6 +29,8 @@ apis:
     # ignore_headers:                        # Optional. Header names to suppress (case-insensitive).
     #   - Authorization                      # Ignored headers are hidden from get_schema output
     #   - X-Internal-Token                   # and not required during request validation.
+    # response_body_only: false              # Optional. When true, HTTP tools return only the
+                                             # response body instead of { status_code, headers, body }.
 
   # - name: another-api
   #   definition: "./another.yaml"

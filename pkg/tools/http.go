@@ -177,6 +177,11 @@ func executeHTTP(ctx context.Context, client *httpclient.Client, entry registry.
 		}
 	}
 
+	if entry.Config.ResponseBodyOnly {
+		data, _ := json.Marshal(bodyVal)
+		return mcp.NewToolResultText(string(data)), nil
+	}
+
 	result := HTTPResult{
 		StatusCode: resp.StatusCode,
 		Headers:    respHeaders,
