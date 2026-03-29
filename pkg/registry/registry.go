@@ -25,6 +25,9 @@ type APIEntry struct {
 	// AllowList restricts which tools and paths are accessible for this API.
 	// Copied from Config.AllowList at load time. Zero value means allow all.
 	AllowList config.APIAllowList
+	// IgnoreHeaders is the set of header names (lowercase) to suppress for this API.
+	// Built from Config.IgnoreHeaders at load time. Nil means no headers are suppressed.
+	IgnoreHeaders map[string]struct{}
 	// doc is the parsed libopenapi document.
 	doc libopenapi.Document
 }
@@ -61,13 +64,19 @@ func (r *Registry) Load(cfg config.APIConfig) error {
 		return fmt.Errorf("build validator for API %q: %w", cfg.Name, err)
 	}
 
+	ignoreHeaders := make(map[string]struct{}, len(cfg.IgnoreHeaders))
+	for _, h := range cfg.IgnoreHeaders {
+		ignoreHeaders[strings.ToLower(h)] = struct{}{}
+	}
+
 	entry := APIEntry{
-		Name:      cfg.Name,
-		Config:    cfg,
-		BaseURL:   baseURL,
-		Validator: v,
-		AllowList: cfg.AllowList,
-		doc:       doc,
+		Name:          cfg.Name,
+		Config:        cfg,
+		BaseURL:       baseURL,
+		Validator:     v,
+		AllowList:     cfg.AllowList,
+		IgnoreHeaders: ignoreHeaders,
+		doc:           doc,
 	}
 	idx := len(r.entries)
 	r.entries = append(r.entries, entry)

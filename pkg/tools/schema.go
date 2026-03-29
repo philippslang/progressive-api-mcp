@@ -15,12 +15,13 @@ import (
 
 // SchemaResult is the full schema for one endpoint.
 type SchemaResult struct {
-	Path            string         `json:"path"`
-	Method          string         `json:"method"`
-	PathParameters  map[string]any `json:"path_parameters,omitempty"`
-	QueryParameters map[string]any `json:"query_parameters,omitempty"`
-	RequestBody     map[string]any `json:"request_body,omitempty"`
-	Responses       map[string]any `json:"responses,omitempty"`
+	Path             string         `json:"path"`
+	Method           string         `json:"method"`
+	PathParameters   map[string]any `json:"path_parameters,omitempty"`
+	QueryParameters  map[string]any `json:"query_parameters,omitempty"`
+	HeaderParameters map[string]any `json:"header_parameters,omitempty"`
+	RequestBody      map[string]any `json:"request_body,omitempty"`
+	Responses        map[string]any `json:"responses,omitempty"`
 }
 
 // RegisterSchemaTools registers the get_schema MCP tool.
@@ -114,6 +115,7 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 		if len(op.Parameters) > 0 {
 			pathParams := make(map[string]any)
 			queryParams := make(map[string]any)
+			headerParams := make(map[string]any)
 			for _, param := range op.Parameters {
 				paramInfo := map[string]any{
 					"description": param.Description,
@@ -139,6 +141,10 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 					pathParams[param.Name] = paramInfo
 				case "query":
 					queryParams[param.Name] = paramInfo
+				case "header":
+					if _, ignored := entry.IgnoreHeaders[strings.ToLower(param.Name)]; !ignored {
+						headerParams[param.Name] = paramInfo
+					}
 				}
 			}
 			if len(pathParams) > 0 {
@@ -146,6 +152,9 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 			}
 			if len(queryParams) > 0 {
 				result.QueryParameters = queryParams
+			}
+			if len(headerParams) > 0 {
+				result.HeaderParameters = headerParams
 			}
 		}
 

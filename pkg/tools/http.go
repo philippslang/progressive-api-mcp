@@ -236,6 +236,15 @@ func validateAndExecute(ctx context.Context, reg *registry.Registry, client *htt
 		req.Header.Set(k, v)
 	}
 
+	// Inject placeholder values for ignored headers that the caller did not supply.
+	// This prevents the validator from raising required-parameter errors for headers
+	// that the caller is not expected to provide. The placeholder is never forwarded.
+	for name := range entry.IgnoreHeaders {
+		if req.Header.Get(name) == "" {
+			req.Header.Set(name, "*")
+		}
+	}
+
 	result := entry.Validator.Validate(req)
 	if !result.Valid {
 		details := make([]ValidationDetail, 0, len(result.Errors))

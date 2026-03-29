@@ -63,7 +63,11 @@ type APIConfig struct {
 	BasePath   string       `yaml:"base_path"`
 	// AllowList restricts which tools and paths are available for this API.
 	// Zero value means no restrictions (all tools and paths allowed).
-	AllowList  APIAllowList `yaml:"allow_list"`
+	AllowList APIAllowList `yaml:"allow_list"`
+	// IgnoreHeaders is a list of header names (case-insensitive) to suppress.
+	// Ignored headers are excluded from get_schema output and are not required
+	// during request validation for any HTTP tool.
+	IgnoreHeaders []string `yaml:"ignore_headers"`
 }
 
 // Validate returns an error if the Config is invalid.
@@ -107,6 +111,11 @@ func (c Config) Validate() error {
 		for tool := range api.AllowList.Paths {
 			if _, ok := knownToolNames[tool]; !ok {
 				return fmt.Errorf("apis[%d].allow_list.paths: unknown tool name %q; valid names are: %s", i, tool, knownToolNamesHint)
+			}
+		}
+		for j, h := range api.IgnoreHeaders {
+			if h == "" {
+				return fmt.Errorf("apis[%d].ignore_headers[%d]: header name must not be empty", i, j)
 			}
 		}
 		lower := strings.ToLower(api.Name)

@@ -1,4 +1,5 @@
-// mcpls connects to an MCP server and lists all registered tool names, one per line.
+// mcpls connects to an MCP server, lists all registered tool names, and calls
+// http_get with path /pets as a demonstration.
 //
 // Usage: mcpls <mcp-endpoint-url>
 //
@@ -7,6 +8,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -59,5 +61,32 @@ func main() {
 
 	for _, tool := range result.Tools {
 		fmt.Println(tool.Name)
+	}
+
+	// Call http_get with path /pets as a demonstration.
+	getResult, err := c.CallTool(ctx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name: "http_get",
+			Arguments: map[string]any{
+				"path": "/pets",
+			},
+		},
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "mcpls: http_get failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, content := range getResult.Content {
+		if tc, ok := content.(mcp.TextContent); ok {
+			var pretty any
+			if json.Unmarshal([]byte(tc.Text), &pretty) == nil {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				enc.Encode(pretty)
+			} else {
+				fmt.Println(tc.Text)
+			}
+		}
 	}
 }
