@@ -66,9 +66,10 @@ func main() {
 	// Call http_get with path /pets as a demonstration.
 	getResult, err := c.CallTool(ctx, mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name: "http_get",
+			Name: "get_schema",
 			Arguments: map[string]any{
-				"path": "/pets",
+				"method": "POST",
+				"path":   "/pets",
 			},
 		},
 	})

@@ -168,7 +168,7 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 				if strings.Contains(contentType, "json") && mediaType.Schema != nil {
 					schema := mediaType.Schema.Schema()
 					if schema != nil {
-						bodySchema["type"] = schemaToMap(schema)
+						bodySchema["schema"] = schemaToMap(schema)
 					}
 				}
 			}
@@ -200,14 +200,61 @@ func RegisterSchemaTools(s *server.MCPServer, reg *registry.Registry, prefix str
 	})
 }
 
-// schemaToMap converts a libopenapi Schema to a map[string]any for JSON output.
+// schemaToMap converts a libopenapi Schema to a fully resolved map[string]any for JSON output.
 func schemaToMap(schema *base.Schema) map[string]any {
+	return schemaToMapDepth(schema, 0)
+}
+
+const maxSchemaDepth = 10
+
+// schemaToMapDepth recursively resolves a libopenapi Schema up to maxSchemaDepth levels deep.
+// It expands properties, required flags, descriptions, formats, and array item schemas.
+// Circular references and excessively deep schemas are terminated by the depth guard.
+func schemaToMapDepth(schema *base.Schema, depth int) map[string]any {
+	if schema == nil || depth > maxSchemaDepth {
+		return map[string]any{}
+	}
+
 	m := map[string]any{}
+
 	if len(schema.Type) > 0 {
 		m["type"] = schema.Type[0]
 	}
 	if schema.Format != "" {
 		m["format"] = schema.Format
 	}
+	if schema.Description != "" {
+		m["description"] = schema.Description
+	}
+
+	// Resolve properties and mark each with its required status.
+	if schema.Properties != nil {
+		requiredSet := make(map[string]bool, len(schema.Required))
+		for _, r := range schema.Required {
+			requiredSet[r] = true
+		}
+		props := make(map[string]any)
+		for name, proxy := range schema.Properties.FromOldest() {
+			propSchema := proxy.Schema()
+			if propSchema == nil {
+				continue
+			}
+			propMap := schemaToMapDepth(propSchema, depth+1)
+			propMap["required"] = requiredSet[name]
+			props[name] = propMap
+		}
+		if len(props) > 0 {
+			m["properties"] = props
+		}
+	}
+
+	// Resolve array item schema.
+	if schema.Items != nil && schema.Items.IsA() && schema.Items.A != nil {
+		itemSchema := schema.Items.A.Schema()
+		if itemSchema != nil {
+			m["items"] = schemaToMapDepth(itemSchema, depth+1)
+		}
+	}
+
 	return m
 }

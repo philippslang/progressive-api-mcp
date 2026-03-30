@@ -100,7 +100,3 @@ server:
 
 The prefix must start with a letter or underscore and contain only letters, digits, and underscores. A trailing underscore is stripped automatically.
 
-
-## TODO
-- Cache support (in memory, distributed e.g. redis)
-- Detect long responses, provide mechanism to cache and return tail/first n lines/other filter

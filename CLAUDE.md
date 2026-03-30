@@ -1,6 +1,6 @@
 # prograpimcp Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-29
+Auto-generated from all feature plans. Last updated: 2026-03-30
 
 ## Active Technologies
 - Go 1.22+ (inherits from `001-openapi-mcp-server`) + No new dependencies (002-mcp-tool-prefix)
@@ -52,9 +52,9 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 011-resolve-schema-objects: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
 - 010-body-only-response: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
 - 009-ignore-api-headers: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator, spf13/cobra + viper — no new dependencies
-- 008-mock-api-servers: Added Go 1.22+ + `cobra` (CLI), `net/http` stdlib (HTTP server), `encoding/json` stdlib (JSON responses), `sync` stdlib (RWMutex for in-memory store)
 
 
 <!-- MANUAL ADDITIONS START -->
