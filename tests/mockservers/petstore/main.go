@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,6 +33,13 @@ type newPet struct {
 type petPatch struct {
 	Name *string `json:"name,omitempty"`
 	Age  *int    `json:"age,omitempty"`
+}
+
+type jsonPatchOp struct {
+	Op    string          `json:"op"`
+	Path  string          `json:"path"`
+	Value json.RawMessage `json:"value,omitempty"`
+	From  string          `json:"from,omitempty"`
 }
 
 type Owner struct {
@@ -154,13 +162,7 @@ func (s *petstoreStore) patchPet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var patch petPatch
-	if r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
-	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	p, exists := s.pets[id]
@@ -168,12 +170,53 @@ func (s *petstoreStore) patchPet(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "pet not found")
 		return
 	}
-	if patch.Name != nil {
-		p.Name = *patch.Name
+
+	if r.ContentLength != 0 {
+		var raw json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		trimmed := bytes.TrimLeft(raw, " \t\r\n")
+		if len(trimmed) > 0 && trimmed[0] == '[' {
+			// RFC 6902 JSON Patch
+			var ops []jsonPatchOp
+			if err := json.Unmarshal(raw, &ops); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON Patch body")
+				return
+			}
+			for _, op := range ops {
+				if op.Op == "replace" {
+					switch op.Path {
+					case "/name":
+						var v string
+						if err := json.Unmarshal(op.Value, &v); err == nil {
+							p.Name = v
+						}
+					case "/age":
+						var v int
+						if err := json.Unmarshal(op.Value, &v); err == nil {
+							p.Age = &v
+						}
+					}
+				}
+			}
+		} else {
+			// JSON Merge Patch
+			var patch petPatch
+			if err := json.Unmarshal(raw, &patch); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid request body")
+				return
+			}
+			if patch.Name != nil {
+				p.Name = *patch.Name
+			}
+			if patch.Age != nil {
+				p.Age = patch.Age
+			}
+		}
 	}
-	if patch.Age != nil {
-		p.Age = patch.Age
-	}
+
 	s.pets[id] = p
 	writeJSON(w, http.StatusOK, p)
 }

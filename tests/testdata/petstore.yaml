@@ -100,7 +100,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PetPatch"
+              oneOf:
+                - $ref: "#/components/schemas/JsonPatchDocument"
+                - $ref: "#/components/schemas/PetPatch"
       responses:
         "200":
           description: Pet patched
@@ -186,6 +188,24 @@ components:
           type: string
         age:
           type: integer
+    JsonPatchOp:
+      type: object
+      required:
+        - op
+        - path
+      properties:
+        op:
+          type: string
+          enum: [add, remove, replace, move, copy, test]
+        path:
+          type: string
+        value: {}
+        from:
+          type: string
+    JsonPatchDocument:
+      type: array
+      items:
+        $ref: "#/components/schemas/JsonPatchOp"
     Owner:
       type: object
       required:

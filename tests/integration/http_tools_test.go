@@ -206,6 +206,16 @@ func TestHTTPToolsEndToEnd(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(text), &result))
 		assert.Equal(t, float64(200), result["status_code"])
 	})
+
+	t.Run("http_patch rfc6902 array body", func(t *testing.T) {
+		text := callTool(t, c, "http_patch", map[string]any{
+			"path": "/pets/1",
+			"body": []any{map[string]any{"op": "replace", "path": "/name", "value": "Rex"}},
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, float64(200), result["status_code"])
+	})
 }
 
 // TestExploreAndSchemaTools exercises the explore_api and get_schema tools.

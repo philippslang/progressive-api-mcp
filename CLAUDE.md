@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-30
 - In-memory only (`sync.RWMutex`-protected maps); no disk persistence (008-mock-api-servers)
 - In-memory only (no persistence) (009-ignore-api-headers)
 - Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies (010-body-only-response)
+- N/A (in-memory mock server, no persistence) (012-fix-patch-schema)
+- N/A (in-memory mock server) (012-fix-patch-schema)
 
 - Go 1.22+ (001-openapi-mcp-server)
 
@@ -52,9 +54,9 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 012-fix-patch-schema: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
+- 012-fix-patch-schema: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
 - 011-resolve-schema-objects: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
-- 010-body-only-response: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
-- 009-ignore-api-headers: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator, spf13/cobra + viper — no new dependencies
 
 
 <!-- MANUAL ADDITIONS START -->

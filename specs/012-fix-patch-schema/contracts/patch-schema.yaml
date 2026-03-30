@@ -1,0 +1,118 @@
+# Contract: PATCH /pets/{id} — Dual Patch Format (Merge Patch + RFC 6902)
+# The corrected OpenAPI schema supports both JSON Merge Patch and RFC 6902 JSON Patch.
+
+openapi: "3.1.0"
+info:
+  title: Petstore PATCH Schema Contract
+  description: |
+    Corrected requestBody schema for PATCH /pets/{id}.
+    Accepts either a JSON Merge Patch object (PetPatch) or an RFC 6902 JSON Patch
+    array (JsonPatchDocument) via oneOf.
+
+paths:
+  /pets/{id}:
+    patch:
+      summary: Partially update a pet
+      description: |
+        Accepts either:
+        - JSON Merge Patch (RFC 7396): a plain object with optional fields to update
+        - JSON Patch (RFC 6902): an array of patch operations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/JsonPatchDocument"
+                - $ref: "#/components/schemas/PetPatch"
+            examples:
+              merge_patch_name:
+                summary: Merge patch — update name
+                value:
+                  name: "Rex"
+              merge_patch_multiple:
+                summary: Merge patch — update name and age
+                value:
+                  name: "Rex"
+                  age: 5
+              rfc6902_replace_name:
+                summary: RFC 6902 — replace name
+                value:
+                  - op: replace
+                    path: /name
+                    value: "Rex"
+              rfc6902_multiple:
+                summary: RFC 6902 — replace name and age
+                value:
+                  - op: replace
+                    path: /name
+                    value: "Rex"
+                  - op: replace
+                    path: /age
+                    value: 5
+              rfc6902_empty:
+                summary: RFC 6902 — empty patch (no-op)
+                value: []
+      responses:
+        "200":
+          description: Pet patched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "404":
+          description: Pet not found
+
+components:
+  schemas:
+    PetPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+
+    JsonPatchDocument:
+      type: array
+      items:
+        $ref: "#/components/schemas/JsonPatchOp"
+
+    JsonPatchOp:
+      type: object
+      required:
+        - op
+        - path
+      properties:
+        op:
+          type: string
+          enum: [add, remove, replace, move, copy, test]
+        path:
+          type: string
+        value: {}
+        from:
+          type: string
+
+    Pet:
+      type: object
+      required: [id, name, species]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        species:
+          type: string
+        age:
+          type: integer
+
+# Rejection examples (schema validation MUST reject these):
+# - [{"path":"/name","value":"Rex"}]               → missing required 'op' in JsonPatchOp
+# - [{"op":"merge","path":"/name","value":"Rex"}]  → 'op' not in enum
+# - "just a string"                                → neither object nor array
