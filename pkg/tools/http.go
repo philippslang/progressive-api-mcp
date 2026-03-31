@@ -250,16 +250,18 @@ func validateAndExecute(ctx context.Context, reg *registry.Registry, client *htt
 		}
 	}
 
-	result := entry.Validator.Validate(req)
-	if !result.Valid {
-		details := make([]ValidationDetail, 0, len(result.Errors))
-		for _, e := range result.Errors {
-			details = append(details, ValidationDetail{Type: e.Type, Field: e.Field, Message: e.Message})
+	if !entry.SkipValidation {
+		result := entry.Validator.Validate(req)
+		if !result.Valid {
+			details := make([]ValidationDetail, 0, len(result.Errors))
+			for _, e := range result.Errors {
+				details = append(details, ValidationDetail{Type: e.Type, Field: e.Field, Message: e.Message})
+			}
+			r, _ := toolErrorResult("VALIDATION_FAILED",
+				fmt.Sprintf("request validation failed for %s %s", method, path),
+				details, nil)
+			return r, nil
 		}
-		r, _ := toolErrorResult("VALIDATION_FAILED",
-			fmt.Sprintf("request validation failed for %s %s", method, path),
-			details, nil)
-		return r, nil
 	}
 
 	return executeHTTP(ctx, client, entry, method, path, queryParams, headers, body)

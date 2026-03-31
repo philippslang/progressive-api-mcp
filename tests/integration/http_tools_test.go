@@ -662,3 +662,91 @@ func TestMalformedDefinitionFailsStartup(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to load API definitions")
 }
+
+// TestSkipValidation verifies that setting skip_validation: true on an API causes
+// schema-invalid payloads to bypass validation and reach the upstream API.
+func TestSkipValidation(t *testing.T) {
+	var receivedBody []byte
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+	}))
+	defer target.Close()
+
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:           "petstore",
+		Definition:     testdataPath("petstore.yaml"),
+		Host:           target.URL,
+		SkipValidation: true,
+	}))
+
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("invalid body forwarded when skip_validation true", func(t *testing.T) {
+		// POST /pets with missing required 'name' field would normally fail validation.
+		text := callTool(t, c, "http_post", map[string]any{
+			"path": "/pets",
+			"body": map[string]any{"species": "dog"}, // 'name' required but absent
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		// Must NOT return VALIDATION_FAILED — request must reach the upstream.
+		assert.NotEqual(t, "VALIDATION_FAILED", result["code"], "validation should be skipped")
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+
+	_ = receivedBody
+}
+
+// TestSkipValidationPerAPIIsolation verifies that skip_validation on one API does not
+// disable validation on a second API configured in the same server instance.
+func TestSkipValidationPerAPIIsolation(t *testing.T) {
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
+	}))
+	defer target.Close()
+
+	reg := registry.New()
+	// lenient: skip_validation enabled
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:           "lenient",
+		Definition:     testdataPath("petstore.yaml"),
+		Host:           target.URL,
+		SkipValidation: true,
+	}))
+	// strict: validation enabled (default)
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name:       "strict",
+		Definition: testdataPath("petstore.yaml"),
+		Host:       target.URL,
+	}))
+
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("invalid body forwarded for lenient API", func(t *testing.T) {
+		text := callTool(t, c, "http_post", map[string]any{
+			"api":  "lenient",
+			"path": "/pets",
+			"body": map[string]any{"species": "dog"}, // missing required 'name'
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.NotEqual(t, "VALIDATION_FAILED", result["code"])
+		assert.Equal(t, float64(200), result["status_code"])
+	})
+
+	t.Run("invalid body rejected for strict API", func(t *testing.T) {
+		text := callTool(t, c, "http_post", map[string]any{
+			"api":  "strict",
+			"path": "/pets",
+			"body": map[string]any{"species": "dog"}, // missing required 'name'
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, "VALIDATION_FAILED", result["code"])
+	})
+}

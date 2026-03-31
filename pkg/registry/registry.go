@@ -28,6 +28,9 @@ type APIEntry struct {
 	// IgnoreHeaders is the set of header names (lowercase) to suppress for this API.
 	// Built from Config.IgnoreHeaders at load time. Nil means no headers are suppressed.
 	IgnoreHeaders map[string]struct{}
+	// SkipValidation mirrors APIConfig.SkipValidation. When true, request payload
+	// schema validation is bypassed and the payload is forwarded to the upstream API as-is.
+	SkipValidation bool
 	// doc is the parsed libopenapi document.
 	doc libopenapi.Document
 }
@@ -70,13 +73,14 @@ func (r *Registry) Load(cfg config.APIConfig) error {
 	}
 
 	entry := APIEntry{
-		Name:          cfg.Name,
-		Config:        cfg,
-		BaseURL:       baseURL,
-		Validator:     v,
-		AllowList:     cfg.AllowList,
-		IgnoreHeaders: ignoreHeaders,
-		doc:           doc,
+		Name:           cfg.Name,
+		Config:         cfg,
+		BaseURL:        baseURL,
+		Validator:      v,
+		AllowList:      cfg.AllowList,
+		IgnoreHeaders:  ignoreHeaders,
+		SkipValidation: cfg.SkipValidation,
+		doc:            doc,
 	}
 	idx := len(r.entries)
 	r.entries = append(r.entries, entry)

@@ -72,6 +72,10 @@ type APIConfig struct {
 	// When true, HTTP tools return only the response body instead of the full
 	// { status_code, headers, body } envelope. Default: false.
 	ResponseBodyOnly bool `yaml:"response_body_only"`
+	// SkipValidation disables request payload schema validation for this API.
+	// When true, tool calls bypass the MCP server's validator and forward the
+	// payload directly to the upstream API. Default: false (validation enabled).
+	SkipValidation bool `yaml:"skip_validation"`
 }
 
 // Validate returns an error if the Config is invalid.
