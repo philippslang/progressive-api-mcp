@@ -31,6 +31,11 @@ apis:
     #   - X-Internal-Token                   # and not required during request validation.
     # response_body_only: false              # Optional. When true, HTTP tools return only the
                                              # response body instead of { status_code, headers, body }.
+    # skip_validation: false                 # Optional. When true, request payload schema validation
+                                             # is bypassed and the payload is forwarded directly to
+                                             # the upstream API. Useful when the upstream API accepts
+                                             # payloads that do not fully conform to its own schema.
+                                             # Default: false (validation enabled).
 
   # - name: another-api
   #   definition: "./another.yaml"
