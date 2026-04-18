@@ -14,22 +14,23 @@ var validToolPrefix = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // knownToolNames is the fixed set of base MCP tool names.
 var knownToolNames = map[string]struct{}{
-	"explore_api": {},
-	"get_schema":  {},
-	"http_get":    {},
-	"http_post":   {},
-	"http_put":    {},
-	"http_patch":  {},
+	"list_api":   {},
+	"get_schema": {},
+	"search_api": {},
+	"http_get":   {},
+	"http_post":  {},
+	"http_put":   {},
+	"http_patch": {},
 }
 
-const knownToolNamesHint = "explore_api, get_schema, http_get, http_post, http_put, http_patch"
+const knownToolNamesHint = "list_api, get_schema, search_api, http_get, http_post, http_put, http_patch"
 
 // APIAllowList restricts which MCP tools and paths are available for one API entry.
 // Zero value means no restrictions: all tools registered, all paths accessible.
 type APIAllowList struct {
 	// Tools is the list of base tool names to register for this API.
-	// Nil or empty means all 6 tools are allowed.
-	// Valid values: "explore_api", "get_schema", "http_get", "http_post", "http_put", "http_patch".
+	// Nil or empty means all 7 tools are allowed.
+	// Valid values: "list_api", "get_schema", "search_api", "http_get", "http_post", "http_put", "http_patch".
 	Tools []string `yaml:"tools"`
 	// Paths maps each base tool name to the OpenAPI path templates it may access.
 	// Nil or empty map means all paths are allowed for all tools.

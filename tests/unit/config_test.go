@@ -219,19 +219,20 @@ func TestAPIAllowListValidation(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		cfg     config.Config
-		wantErr bool
-		errMsg  string
+		name        string
+		cfg         config.Config
+		wantErr     bool
+		errMsg      string
+		errContains []string
 	}{
 		{
 			name:    "all 6 tools explicitly listed — valid",
-			cfg:     validBase(config.APIAllowList{Tools: []string{"explore_api", "get_schema", "http_get", "http_post", "http_put", "http_patch"}}),
+			cfg:     validBase(config.APIAllowList{Tools: []string{"list_api", "get_schema", "http_get", "http_post", "http_put", "http_patch"}}),
 			wantErr: false,
 		},
 		{
-			name:    "explore_api alone — valid",
-			cfg:     validBase(config.APIAllowList{Tools: []string{"explore_api"}}),
+			name:    "list_api alone — valid",
+			cfg:     validBase(config.APIAllowList{Tools: []string{"list_api"}}),
 			wantErr: false,
 		},
 		{
@@ -259,7 +260,7 @@ func TestAPIAllowListValidation(t *testing.T) {
 		{
 			name: "tool in Paths but not in Tools — valid (dormant restriction)",
 			cfg: validBase(config.APIAllowList{
-				Tools: []string{"explore_api"},
+				Tools: []string{"list_api"},
 				Paths: map[string][]string{"http_get": {"/pets"}},
 			}),
 			wantErr: false,
@@ -272,6 +273,21 @@ func TestAPIAllowListValidation(t *testing.T) {
 			}),
 			wantErr: false,
 		},
+		{
+			name:        "legacy explore_api in allow_list.tools rejected",
+			cfg:         validBase(config.APIAllowList{Tools: []string{"explore_api"}}),
+			wantErr:     true,
+			errContains: []string{"explore_api", "list_api"},
+		},
+		{
+			name: "legacy explore_api in allow_list.paths rejected",
+			cfg: validBase(config.APIAllowList{
+				Tools: []string{"list_api"},
+				Paths: map[string][]string{"explore_api": {"/pets"}},
+			}),
+			wantErr:     true,
+			errContains: []string{"explore_api", "list_api"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -281,6 +297,9 @@ func TestAPIAllowListValidation(t *testing.T) {
 				require.Error(t, err)
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+				for _, sub := range tt.errContains {
+					assert.Contains(t, err.Error(), sub)
 				}
 			} else {
 				require.NoError(t, err)

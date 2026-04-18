@@ -18,13 +18,17 @@ apis:
     base_path: "/v2"                         # Optional: overrides servers[0].url path
     # allow_list:                            # Optional. Omit entirely for full access.
     #   tools:                               # Only these tool names are registered.
-    #     - explore_api                      # Valid values: explore_api, get_schema,
-    #     - get_schema                       #   http_get, http_post, http_put, http_patch
+    #     - list_api                         # Valid values: list_api, get_schema,
+    #     - get_schema                       #   search_api, http_get, http_post,
+    #     - search_api                       #   http_put, http_patch
     #     - http_get                         # Omit for all tools (default).
     #   paths:                               # Per-tool path restrictions (OpenAPI templates).
     #     http_get:                          # Omit a tool for all-paths-allowed.
     #       - /pets                          # Exact template match, e.g. /pets/{id} not /pets/42
     #       - /pets/{id}
+    #     search_api:                        # search_api respects per-tool path filters too;
+    #       - /pets                          # endpoints outside the list are excluded from
+    #       - /pets/{id}                     # results even if their summary/description matches.
 
     # ignore_headers:                        # Optional. Header names to suppress (case-insensitive).
     #   - Authorization                      # Ignored headers are hidden from get_schema output

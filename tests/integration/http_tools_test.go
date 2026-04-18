@@ -53,8 +53,9 @@ func makeTestClientFull(t *testing.T, prefix string, allowedTools map[string]boo
 	t.Helper()
 	srv := mcpserver.NewMCPServer("test", "1.0.0", mcpserver.WithToolCapabilities(true))
 	tools.RegisterHTTPTools(srv, reg, httpClient, prefix, allowedTools)
-	tools.RegisterExploreTools(srv, reg, prefix, allowedTools)
+	tools.RegisterListTools(srv, reg, prefix, allowedTools)
 	tools.RegisterSchemaTools(srv, reg, prefix, allowedTools)
+	tools.RegisterSearchTools(srv, reg, prefix, allowedTools)
 
 	tr := transport.NewInProcessTransport(srv)
 	c := client.NewClient(tr)
@@ -218,8 +219,8 @@ func TestHTTPToolsEndToEnd(t *testing.T) {
 	})
 }
 
-// TestExploreAndSchemaTools exercises the explore_api and get_schema tools.
-func TestExploreAndSchemaTools(t *testing.T) {
+// TestListAndSchemaTools exercises the list_api and get_schema tools.
+func TestListAndSchemaTools(t *testing.T) {
 	reg := registry.New()
 	require.NoError(t, reg.Load(config.APIConfig{
 		Name:       "petstore",
@@ -230,8 +231,8 @@ func TestExploreAndSchemaTools(t *testing.T) {
 	httpClient := httpclient.New(10 * time.Second)
 	c := makeTestClient(t, reg, httpClient)
 
-	t.Run("explore_api returns all paths sorted", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+	t.Run("list_api returns all paths sorted", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Greater(t, len(paths), 0)
@@ -241,8 +242,8 @@ func TestExploreAndSchemaTools(t *testing.T) {
 		}
 	})
 
-	t.Run("explore_api with /pets prefix filters", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{"prefix": "/pets"})
+	t.Run("list_api with /pets prefix filters", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{"prefix": "/pets"})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		for _, p := range paths {
@@ -251,8 +252,8 @@ func TestExploreAndSchemaTools(t *testing.T) {
 		}
 	})
 
-	t.Run("explore_api with /owners prefix filters", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{"prefix": "/owners"})
+	t.Run("list_api with /owners prefix filters", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{"prefix": "/owners"})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.NotEmpty(t, paths)
@@ -262,8 +263,8 @@ func TestExploreAndSchemaTools(t *testing.T) {
 		}
 	})
 
-	t.Run("explore_api prefix matches nothing returns empty array", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{"prefix": "/nonexistent"})
+	t.Run("list_api prefix matches nothing returns empty array", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{"prefix": "/nonexistent"})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Empty(t, paths)
@@ -331,7 +332,7 @@ func TestMultiAPIAmbiguity(t *testing.T) {
 	c := makeTestClient(t, reg, httpClient)
 
 	t.Run("omitting api with multiple APIs returns AMBIGUOUS_API", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+		text := callTool(t, c, "list_api", map[string]any{})
 		var result map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &result))
 		assert.Equal(t, "AMBIGUOUS_API", result["code"])
@@ -342,7 +343,7 @@ func TestMultiAPIAmbiguity(t *testing.T) {
 	})
 
 	t.Run("specifying api=petstore targets petstore paths", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{"api": "petstore"})
+		text := callTool(t, c, "list_api", map[string]any{"api": "petstore"})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.NotEmpty(t, paths)
@@ -354,7 +355,7 @@ func TestMultiAPIAmbiguity(t *testing.T) {
 	})
 
 	t.Run("specifying api=bookstore targets bookstore paths", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{"api": "bookstore"})
+		text := callTool(t, c, "list_api", map[string]any{"api": "bookstore"})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.NotEmpty(t, paths)
@@ -377,15 +378,15 @@ func TestToolPrefix(t *testing.T) {
 	httpClient := httpclient.New(10 * time.Second)
 	c := makeTestClientWithPrefix(t, "test", reg, httpClient)
 
-	t.Run("test_explore_api returns path list", func(t *testing.T) {
-		text := callTool(t, c, "test_explore_api", map[string]any{})
+	t.Run("test_list_api returns path list", func(t *testing.T) {
+		text := callTool(t, c, "test_list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Greater(t, len(paths), 0)
 	})
 
-	t.Run("unprefixed explore_api returns tool-not-found error", func(t *testing.T) {
-		_, err := callToolRaw(t, c, "explore_api", map[string]any{})
+	t.Run("unprefixed list_api returns tool-not-found error", func(t *testing.T) {
+		_, err := callToolRaw(t, c, "list_api", map[string]any{})
 		assert.Error(t, err)
 	})
 }
@@ -401,8 +402,8 @@ func TestNoPrefixDefaultBehavior(t *testing.T) {
 	httpClient := httpclient.New(10 * time.Second)
 	c := makeTestClientWithPrefix(t, "", reg, httpClient)
 
-	t.Run("explore_api works with empty prefix", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+	t.Run("list_api works with empty prefix", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Greater(t, len(paths), 0)
@@ -446,11 +447,11 @@ func TestToolAllowList(t *testing.T) {
 		Host:       "http://localhost:8080",
 	}))
 	httpClient := httpclient.New(10 * time.Second)
-	allowedTools := map[string]bool{"explore_api": true, "http_get": true, "get_schema": true}
+	allowedTools := map[string]bool{"list_api": true, "http_get": true, "get_schema": true}
 	c := makeTestClientWithAllowedTools(t, allowedTools, reg, httpClient)
 
-	t.Run("explore_api succeeds when in allow map", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+	t.Run("list_api succeeds when in allow map", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Greater(t, len(paths), 0)
@@ -478,8 +479,8 @@ func TestDefaultAllToolsAllowed(t *testing.T) {
 	httpClient := httpclient.New(10 * time.Second)
 	c := makeTestClientWithAllowedTools(t, nil, reg, httpClient)
 
-	t.Run("explore_api available with nil allowedTools", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+	t.Run("list_api available with nil allowedTools", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		assert.Greater(t, len(paths), 0)
@@ -533,8 +534,8 @@ func TestPathAllowList(t *testing.T) {
 	})
 }
 
-// TestExplorePathAllowList verifies explore_api filters its result to allowed paths.
-func TestExplorePathAllowList(t *testing.T) {
+// TestListPathAllowList verifies list_api filters its result to allowed paths.
+func TestListPathAllowList(t *testing.T) {
 	reg := registry.New()
 	require.NoError(t, reg.Load(config.APIConfig{
 		Name:       "petstore",
@@ -542,15 +543,15 @@ func TestExplorePathAllowList(t *testing.T) {
 		Host:       "http://localhost:8080",
 		AllowList: config.APIAllowList{
 			Paths: map[string][]string{
-				"explore_api": {"/pets", "/pets/{id}"},
+				"list_api": {"/pets", "/pets/{id}"},
 			},
 		},
 	}))
 	httpClient := httpclient.New(10 * time.Second)
 	c := makeTestClient(t, reg, httpClient)
 
-	t.Run("explore_api returns only allowed paths", func(t *testing.T) {
-		text := callTool(t, c, "explore_api", map[string]any{})
+	t.Run("list_api returns only allowed paths", func(t *testing.T) {
+		text := callTool(t, c, "list_api", map[string]any{})
 		var paths []map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &paths))
 		require.NotEmpty(t, paths)
@@ -608,14 +609,14 @@ func TestCombinedAllowList(t *testing.T) {
 		Definition: testdataPath("petstore.yaml"),
 		Host:       target.URL,
 		AllowList: config.APIAllowList{
-			Tools: []string{"explore_api", "http_get", "http_post"},
+			Tools: []string{"list_api", "http_get", "http_post"},
 			Paths: map[string][]string{
 				"http_post": {"/pets"},
 			},
 		},
 	}))
 	httpClient := httpclient.New(10 * time.Second)
-	allowedTools := map[string]bool{"explore_api": true, "http_get": true, "http_post": true}
+	allowedTools := map[string]bool{"list_api": true, "http_get": true, "http_post": true}
 	c := makeTestClientWithAllowedTools(t, allowedTools, reg, httpClient)
 
 	t.Run("http_post /pets executes — tool and path both allowed", func(t *testing.T) {
@@ -748,5 +749,134 @@ func TestSkipValidationPerAPIIsolation(t *testing.T) {
 		var result map[string]any
 		require.NoError(t, json.Unmarshal([]byte(text), &result))
 		assert.Equal(t, "VALIDATION_FAILED", result["code"])
+	})
+}
+
+// TestSearchAPIAcrossAllAPIs verifies search_api scans every registered API
+// when no api filter is given, and covers error/empty-match cases.
+func TestSearchAPIAcrossAllAPIs(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name: "petstore", Definition: testdataPath("petstore.yaml"), Host: "http://localhost:8080",
+	}))
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name: "bookstore", Definition: testdataPath("bookstore.yaml"), Host: "http://localhost:9090",
+	}))
+
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("path match hits petstore only", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "pet"})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		require.NotEmpty(t, results)
+		sawPetstore := false
+		for _, r := range results {
+			assert.Equal(t, "petstore", r["api"])
+			assert.NotEmpty(t, r["method"])
+			assert.NotEmpty(t, r["path"])
+			sawPetstore = true
+		}
+		assert.True(t, sawPetstore)
+	})
+
+	t.Run("summary-only match returns endpoint", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "partially"})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		require.Len(t, results, 1)
+		assert.Equal(t, "petstore", results[0]["api"])
+		assert.Equal(t, "PATCH", results[0]["method"])
+		assert.Equal(t, "/pets/{id}", results[0]["path"])
+	})
+
+	t.Run("query matches paths in multiple APIs", func(t *testing.T) {
+		textPet := callTool(t, c, "search_api", map[string]any{"query": "pet"})
+		textBook := callTool(t, c, "search_api", map[string]any{"query": "book"})
+		var petResults, bookResults []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(textPet), &petResults))
+		require.NoError(t, json.Unmarshal([]byte(textBook), &bookResults))
+		assert.NotEmpty(t, petResults)
+		assert.NotEmpty(t, bookResults)
+		for _, r := range petResults {
+			assert.Equal(t, "petstore", r["api"])
+		}
+		for _, r := range bookResults {
+			assert.Equal(t, "bookstore", r["api"])
+		}
+	})
+
+	t.Run("post endpoint exposes schema", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "/pets"})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		foundPOST := false
+		for _, r := range results {
+			if r["method"] == "POST" && r["path"] == "/pets" {
+				foundPOST = true
+				assert.NotNil(t, r["schema"])
+			}
+		}
+		assert.True(t, foundPOST, "expected POST /pets in results")
+	})
+
+	t.Run("no match returns empty array, no error", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "zzznotfoundzzz"})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		assert.Empty(t, results)
+	})
+
+	t.Run("empty query returns INVALID_INPUT", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "   "})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, "INVALID_INPUT", result["code"])
+	})
+
+	t.Run("case-insensitive match", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{"query": "PET"})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		assert.NotEmpty(t, results)
+	})
+}
+
+// TestSearchAPISingleAPIFilter verifies the optional `api` parameter restricts
+// the search to that API and produces API_NOT_FOUND for unknown names.
+func TestSearchAPISingleAPIFilter(t *testing.T) {
+	reg := registry.New()
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name: "petstore", Definition: testdataPath("petstore.yaml"), Host: "http://localhost:8080",
+	}))
+	require.NoError(t, reg.Load(config.APIConfig{
+		Name: "bookstore", Definition: testdataPath("bookstore.yaml"), Host: "http://localhost:9090",
+	}))
+
+	httpClient := httpclient.New(10 * time.Second)
+	c := makeTestClient(t, reg, httpClient)
+
+	t.Run("api=petstore returns only petstore hits", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{
+			"query": "/",
+			"api":   "petstore",
+		})
+		var results []map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &results))
+		require.NotEmpty(t, results)
+		for _, r := range results {
+			assert.Equal(t, "petstore", r["api"])
+		}
+	})
+
+	t.Run("api=nosuch returns API_NOT_FOUND", func(t *testing.T) {
+		text := callTool(t, c, "search_api", map[string]any{
+			"query": "pet",
+			"api":   "nosuch",
+		})
+		var result map[string]any
+		require.NoError(t, json.Unmarshal([]byte(text), &result))
+		assert.Equal(t, "API_NOT_FOUND", result["code"])
 	})
 }

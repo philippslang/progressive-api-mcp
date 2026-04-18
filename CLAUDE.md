@@ -1,6 +1,6 @@
 # prograpimcp Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-31
+Auto-generated from all feature plans. Last updated: 2026-04-18
 
 ## Active Technologies
 - Go 1.22+ (inherits from `001-openapi-mcp-server`) + No new dependencies (002-mcp-tool-prefix)
@@ -15,6 +15,10 @@ Auto-generated from all feature plans. Last updated: 2026-03-31
 - Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies (010-body-only-response)
 - N/A (in-memory mock server, no persistence) (012-fix-patch-schema)
 - N/A (in-memory mock server) (012-fix-patch-schema)
+- Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi — no new dependencies (014-search-api-tool)
+- In-memory only (uses already-parsed OpenAPI documents from registry) (014-search-api-tool)
+- Go 1.22+ + `github.com/mark3labs/mcp-go` v0.46.0, `github.com/pb33f/libopenapi` — no new dependencies (015-rename-explore-to-list)
+- N/A (in-memory registry, no persistence) (015-rename-explore-to-list)
 
 - Go 1.22+ (001-openapi-mcp-server)
 
@@ -54,9 +58,9 @@ golangci-lint run                           # Lint
 - All exported types and functions in stable packages MUST have doc comments
 
 ## Recent Changes
+- 015-rename-explore-to-list: Added Go 1.22+ + `github.com/mark3labs/mcp-go` v0.46.0, `github.com/pb33f/libopenapi` — no new dependencies
+- 014-search-api-tool: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi — no new dependencies
 - 013-api-skip-validation: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator, spf13/cobra + viper — no new dependencies
-- 012-fix-patch-schema: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
-- 012-fix-patch-schema: Added Go 1.22+ + mark3labs/mcp-go v0.46.0, pb33f/libopenapi + libopenapi-validator — no new dependencies
 
 
 <!-- MANUAL ADDITIONS START -->

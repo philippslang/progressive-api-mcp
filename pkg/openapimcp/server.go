@@ -65,8 +65,9 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	tools.RegisterHTTPTools(s.mcpSrv, s.registry, s.client, effectivePrefix, allowedTools)
-	tools.RegisterExploreTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
+	tools.RegisterListTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
 	tools.RegisterSchemaTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
+	tools.RegisterSearchTools(s.mcpSrv, s.registry, effectivePrefix, allowedTools)
 
 	transport := s.cfg.Server.Transport
 	if transport == "" {

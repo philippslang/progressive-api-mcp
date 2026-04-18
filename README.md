@@ -12,17 +12,18 @@ The obvious approach is to register one MCP tool per API endpoint. A moderately-
 
 | Tool | What it does |
 |------|-------------|
-| `explore_api` | List available paths and their HTTP methods. Supports prefix filtering (e.g. `/pets`) to narrow scope. |
+| `search_api` | Search matching paths and their HTTP methods. Supports prefix filtering (e.g. `/pets`) to narrow scope. |
+| `list_api` | List available paths and their HTTP methods. Supports prefix filtering (e.g. `/pets`) to narrow scope. |
 | `get_schema` | Return the full request/response schema for one specific endpoint. |
 | `http_get` | Execute a validated GET request. |
 | `http_post` | Execute a validated POST request. |
 | `http_put` | Execute a validated PUT request. |
 | `http_patch` | Execute a validated PATCH request. |
 
-The agent starts with `explore_api` to get a fast, cheap overview. It then calls `get_schema` on whichever endpoint it cares about, and only then makes the actual HTTP call. Context grows on demand; nothing is loaded eagerly.
+The agent starts with `list_api` to get a fast, cheap overview. It then calls `get_schema` on whichever endpoint it cares about, and only then makes the actual HTTP call. Context grows on demand; nothing is loaded eagerly.
 
 ```
-explore_api          →  "here are the paths, pick one"
+list_api          →  "here are the paths, pick one"
 get_schema /pets POST →  "here is the shape of that request"
 http_post /pets      →  actual call, validated against schema
 ```
@@ -91,11 +92,11 @@ When running multiple `prograpimcp` instances (one per API), the `tool_prefix` o
 ```yaml
 # petstore server
 server:
-  tool_prefix: "store"   # → store_http_get, store_explore_api, …
+  tool_prefix: "store"   # → store_http_get, store_list_api, …
 
 # payments server
 server:
-  tool_prefix: "pay"     # → pay_http_get, pay_explore_api, …
+  tool_prefix: "pay"     # → pay_http_get, pay_list_api, …
 ```
 
 The prefix must start with a letter or underscore and contain only letters, digits, and underscores. A trailing underscore is stripped automatically.

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/philippslang/progressive-api-mcp/pkg/config"
+	"github.com/philippslang/progressive-api-mcp/pkg/tools"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +48,7 @@ func TestToolErrorPathNotFound(t *testing.T) {
 	assert.Greater(t, len(hints), 0, "hints must have entries for PATH_NOT_FOUND")
 }
 
-// TestPathInfoShape verifies the PathInfo JSON shape used by explore_api.
+// TestPathInfoShape verifies the PathInfo JSON shape used by list_api.
 func TestPathInfoShape(t *testing.T) {
 	raw := `[{"path":"/pets","methods":["GET","POST"],"description":"List or create pets"}]`
 	var result []map[string]any
@@ -87,6 +88,36 @@ func TestToolErrorToolNotPermitted(t *testing.T) {
 	err := json.Unmarshal([]byte(raw), &result)
 	require.NoError(t, err)
 	assert.Equal(t, "TOOL_NOT_PERMITTED", result["code"])
+}
+
+// TestSearchResultShape verifies the SearchResult JSON shape used by search_api.
+func TestSearchResultShape(t *testing.T) {
+	t.Run("schema omitted when nil", func(t *testing.T) {
+		sr := tools.SearchResult{API: "petstore", Method: "GET", Path: "/pets/{id}"}
+		data, err := json.Marshal(sr)
+		require.NoError(t, err)
+		var result map[string]any
+		require.NoError(t, json.Unmarshal(data, &result))
+		assert.Contains(t, result, "api")
+		assert.Contains(t, result, "method")
+		assert.Contains(t, result, "path")
+		assert.NotContains(t, result, "schema")
+	})
+
+	t.Run("schema present when set", func(t *testing.T) {
+		sr := tools.SearchResult{
+			API: "petstore", Method: "POST", Path: "/pets",
+			Schema: map[string]any{"required": true},
+		}
+		data, err := json.Marshal(sr)
+		require.NoError(t, err)
+		var result map[string]any
+		require.NoError(t, json.Unmarshal(data, &result))
+		assert.Equal(t, "petstore", result["api"])
+		assert.Equal(t, "POST", result["method"])
+		assert.Equal(t, "/pets", result["path"])
+		assert.Contains(t, result, "schema")
+	})
 }
 
 // TestSchemaResultShape verifies the SchemaResult JSON shape used by get_schema.
